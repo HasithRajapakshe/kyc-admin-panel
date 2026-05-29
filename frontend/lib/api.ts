@@ -12,7 +12,8 @@ api.interceptors.response.use(
   (error) => {
     if (
       error.response?.status === 401 &&
-      typeof window !== "undefined"
+      typeof window !== "undefined" &&
+      !window.location.pathname.includes("/login")
     ) {
       window.location.href = "/login";
     }
@@ -24,8 +25,8 @@ export default api;
 
 // ── Auth ──────────────────────────────────────────
 export const authApi = {
-  login: (employee_id: string, password: string) =>
-    api.post("/api/auth/login", { employee_id, password }),
+  login: (short_id: string, password: string) =>
+    api.post("/api/auth/login", { short_id, password }),
 
   logout: () =>
     api.post("/api/auth/logout"),

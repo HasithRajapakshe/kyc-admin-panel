@@ -13,7 +13,7 @@ export default function LoginClient() {
   const isReset = params.get("reset") === "1";
 
   // Login fields
-  const [employeeId, setEmployeeId] = useState("");
+  const [shortId, setShortId] = useState("");
   const [password, setPassword]     = useState("");
   const [showPass, setShowPass]     = useState(false);
 
@@ -37,7 +37,7 @@ export default function LoginClient() {
     setError("");
     setBusy(true);
     try {
-      await login(employeeId.trim(), password);
+      await login(shortId.trim(), password);
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })
@@ -76,29 +76,29 @@ export default function LoginClient() {
   }
 
   if (loading) {
-    return (
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#0A1628",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
       <div
         style={{
-          minHeight: "100vh",
-          background: "#0A1628",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          width: 36,
+          height: 36,
+          border: "3px solid #F5A800",
+          borderTopColor: "transparent",
+          borderRadius: "50%",
+          animation: "spin 0.8s linear infinite",
         }}
-      >
-        <div
-          style={{
-            width: 36,
-            height: 36,
-            border: "3px solid #F5A800",
-            borderTopColor: "transparent",
-            borderRadius: "50%",
-            animation: "spin 0.8s linear infinite",
-          }}
-        />
-      </div>
-    );
-  }
+      />
+    </div>
+  );
+}
 
   return (
     <div
@@ -366,15 +366,15 @@ export default function LoginClient() {
                 {/* Employee ID */}
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#334155", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 6 }}>
-                    Employee ID <span style={{ color: "#DC2626" }}>*</span>
+                    Employee Short ID <span style={{ color: "#DC2626" }}>*</span>
                   </label>
                   <input
                     type="text"
                     className="boc-input"
                     style={{ fontFamily: "monospace" }}
-                    placeholder="SAD-0001-xxxx-xxxx-xxxx"
-                    value={employeeId}
-                    onChange={(e) => setEmployeeId(e.target.value)}
+                    placeholder="e.g. sad001"
+                    value={shortId}
+                    onChange={(e) => setShortId(e.target.value)}
                     required
                     autoFocus
                     autoComplete="username"

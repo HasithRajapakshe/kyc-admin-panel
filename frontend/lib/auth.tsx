@@ -14,7 +14,9 @@ export type UserRole = "USR" | "ADM" | "SAD";
 
 export interface AuthUser {
   employee_id: string;
+  short_id: string;
   name: string;
+  full_name?: string;
   email: string;
   role: UserRole;
   branch: string;
@@ -35,7 +37,7 @@ const Ctx = createContext<AuthCtx | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const refresh = async () => {
@@ -44,21 +46,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(res.data);
     } catch {
       setUser(null);
-    } finally {
-      setLoading(false);
     }
   };
 
-  // Auto refresh token every 14 minutes
-  useEffect(() => {
-    refresh();
-    const interval = setInterval(refresh, 14 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const login = async (employee_id: string, password: string) => {
-    const res = await authApi.login(employee_id, password);
-    const u: AuthUser = res.data.user ?? res.data;
+  const login = async (short_id: string, password: string) => {
+    const res = await authApi.login(short_id, password);
+    const u: AuthUser = {
+  ...res.data,
+  name: res.data.full_name ?? res.data.name ?? "Admin",
+};
     setUser(u);
     if (u.force_password_reset) {
       router.push("/login?reset=1");

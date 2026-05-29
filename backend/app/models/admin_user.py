@@ -44,6 +44,7 @@ class AdminUser(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     employee_id = Column(String(50), unique=True, nullable=False, index=True)
+    short_id = Column(String(50), unique=True, nullable=True, index=True)
     bank_id = Column(String(50), nullable=False)
     full_name = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, nullable=False, index=True)
