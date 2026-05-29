@@ -18,7 +18,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 
 class LoginRequest(BaseModel):
-    email: str
+    short_id: str
     password: str
 
 
@@ -55,12 +55,12 @@ def login(
     db: Session = Depends(get_db)
 ):
     user = db.query(AdminUser).filter(
-        AdminUser.email == payload.email
+        AdminUser.short_id == payload.short_id
     ).first()
 
     if not user or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(
-            status_code=401, detail="Invalid email or password")
+            status_code=401, detail="Invalid ID or password")
 
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account is deactivated")
