@@ -75,7 +75,7 @@ function KpiCard({
       >
         <span
           style={{
-            fontSize: 11,
+            fontSize: 12,
             color: "#94A3B8",
             fontWeight: 700,
             letterSpacing: 0.8,
@@ -93,7 +93,7 @@ function KpiCard({
           color: "#0A1628",
           lineHeight: 1,
           marginTop: 10,
-          fontFamily: "Georgia, serif",
+          fontFamily: "Poppins, sans-serif",
           position: "relative",
         }}
       >
@@ -131,7 +131,7 @@ function EmptyState() {
           fontSize: 16,
           fontWeight: 700,
           color: "#0A1628",
-          fontFamily: "Georgia, serif",
+          fontFamily: "Poppins, sans-serif",
         }}
       >
         No data yet
@@ -261,16 +261,16 @@ export default function DashboardPage() {
         <div>
           <h1
             style={{
-              fontSize: 22,
+              fontSize: 34,
               fontWeight: 900,
               color: "#0A1628",
-              fontFamily: "Georgia, serif",
+              fontFamily: "Poppins, sans-serif",
               letterSpacing: -0.5,
             }}
           >
             Dashboard
           </h1>
-          <p style={{ fontSize: 13, color: "#94A3B8", marginTop: 3 }}>
+          <p style={{ fontSize: 15, color: "#94A3B8", marginTop: 4 }}>
             Welcome back, {user?.name} · auto-refreshes every 30s
           </p>
         </div>
@@ -287,7 +287,7 @@ export default function DashboardPage() {
             color: "#334155",
             fontSize: 12,
             cursor: "pointer",
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: "Poppins, sans-serif",
           }}
         >
           <RefreshCw size={13} />
@@ -411,20 +411,20 @@ export default function DashboardPage() {
                 flexShrink: 0,
               }}
             >
-              <span style={{ fontSize: 22 }}>🏦</span>
+              <span style={{ fontSize: 26 }}>🏦</span>
             </div>
             <div>
               <div
                 style={{
-                  fontSize: 14,
+                  fontSize: 16,
                   fontWeight: 700,
                   color: "#0A1628",
-                  fontFamily: "Georgia, serif",
+                  fontFamily: "Poppins, sans-serif",
                 }}
               >
                 Bank of Ceylon — KYC Admin Portal
               </div>
-              <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 3 }}>
+              <div style={{ fontSize: 13, color: "#94A3B8", marginTop: 3 }}>
                 Connected to AI KYC model · CBSL & FIU-SL Compliant ·
                 Last refreshed:{" "}
                 {lastRefresh.toLocaleTimeString("en-LK", {

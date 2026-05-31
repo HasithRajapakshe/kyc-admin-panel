@@ -15,10 +15,10 @@ import { formatDate, maskNic, downloadBlob } from "@/lib/utils";
 
 interface App {
     session_id: string;
-    customer_name?: string;
-    nic?: string;
+    full_name?: string;
+    nic_number?: string;
     email?: string;
-    status: string;
+    verification_status: string;
     created_at: string;
     ai_confidence_score?: number;
     otp_verified?: boolean;
@@ -28,7 +28,8 @@ interface App {
 
 const STATUSES = ["all", "pending", "approved", "rejected", "reviewing"];
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status }: { status?: string }) {
+    if (!status) return null;
     const cfg: Record<string, { bg: string; color: string; dot: string }> = {
         pending: { bg: "#FEF3C7", color: "#92400E", dot: "#F59E0B" },
         approved: { bg: "#DCFCE7", color: "#14532D", dot: "#22C55E" },
@@ -174,7 +175,7 @@ export default function ApplicationsPage() {
                             fontSize: 22,
                             fontWeight: 900,
                             color: "#0A1628",
-                            fontFamily: "Georgia, serif",
+                            fontFamily: "Poppins, sans-serif",
                             letterSpacing: -0.5,
                         }}
                     >
@@ -199,7 +200,7 @@ export default function ApplicationsPage() {
                             color: "#334155",
                             fontSize: 12,
                             cursor: "pointer",
-                            fontFamily: "'DM Sans', sans-serif",
+                            fontFamily: "Poppins, sans-serif",
                         }}
                     >
                         <Download size={13} />
@@ -255,7 +256,7 @@ export default function ApplicationsPage() {
                                 fontSize: 12,
                                 cursor: "pointer",
                                 textTransform: "capitalize",
-                                fontFamily: "'DM Sans', sans-serif",
+                                fontFamily: "Poppins, sans-serif",
                                 transition: "all 0.15s",
                             }}
                         >
@@ -348,7 +349,7 @@ export default function ApplicationsPage() {
                                                     color: "#2563EB",
                                                     fontWeight: 700,
                                                     fontSize: 12,
-                                                    fontFamily: "monospace",
+                                                    fontFamily: "Poppins, sans-serif",
                                                 }}
                                             >
                                                 {app.session_id.slice(0, 16)}…
@@ -363,7 +364,7 @@ export default function ApplicationsPage() {
                                                         fontSize: 13,
                                                     }}
                                                 >
-                                                    {app.customer_name ?? "—"}
+                                                    {app.full_name ?? "—"}
                                                 </div>
                                                 {app.email && (
                                                     <div
@@ -376,16 +377,16 @@ export default function ApplicationsPage() {
                                         </td>
                                         <td>
                                             <span
-                                                style={{ fontFamily: "monospace", fontSize: 12 }}
+                                                style={{ fontFamily: "Poppins, sans-serif", fontSize: 12 }}
                                             >
-                                                {maskNic(app.nic)}
+                                                {maskNic(app.nic_number)}
                                             </span>
                                         </td>
                                         <td style={{ fontSize: 12 }}>
                                             {formatDate(app.created_at)}
                                         </td>
                                         <td>
-                                            <StatusBadge status={app.status} />
+                                            <StatusBadge status={app.verification_status} />
                                         </td>
                                         <td>
                                             <RiskBadge score={app.risk_score} />
@@ -430,7 +431,7 @@ export default function ApplicationsPage() {
                                                         display: "flex",
                                                         alignItems: "center",
                                                         gap: 4,
-                                                        fontFamily: "'DM Sans', sans-serif",
+                                                        fontFamily: "Poppins, sans-serif",
                                                     }}
                                                 >
                                                     View <Arrow size={11} />

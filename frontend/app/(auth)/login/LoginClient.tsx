@@ -106,7 +106,7 @@ export default function LoginClient() {
       style={{
         minHeight: "100vh",
         display: "flex",
-        fontFamily: "'Poppins'",
+        fontFamily: "Poppins, sans-serif",
       }}
     >
       {/* ── Left Panel — BOC Navy ── */}
@@ -149,7 +149,7 @@ export default function LoginClient() {
               <span
                 style={{
                   fontSize: 28, fontWeight: 900, color: "#0A1628",
-                  fontFamily: "Poppins", letterSpacing: -1,
+                  fontFamily: "Poppins, sans-serif", letterSpacing: -1,
                 }}
               >
                 B
@@ -159,7 +159,7 @@ export default function LoginClient() {
               <div
                 style={{
                   fontWeight: 700, fontSize: 20, color: "#fff",
-                  fontFamily: "Poppins", letterSpacing: -0.5,
+                  fontFamily: "Poppins, sans-serif", letterSpacing: -0.5,
                 }}
               >
                 Bank of Ceylon
@@ -180,7 +180,7 @@ export default function LoginClient() {
             <h1
               style={{
                 fontSize: 50, fontWeight: 700, color: "#fff",
-                fontFamily: "Poppins", lineHeight: 1.3, letterSpacing: 0.5,
+                fontFamily: "Poppins, sans-serif", lineHeight: 1.3, letterSpacing: 0.5,
               }}
             >
               Digital KYC<br />Administration
@@ -252,7 +252,7 @@ export default function LoginClient() {
                   <div style={{ padding: 8, borderRadius: 8, background: "#FEF3C7", border: "1px solid #FCD34D" }}>
                     <Lock size={18} color="#D97706" />
                   </div>
-                  <h2 style={{ fontSize: 28, fontWeight: 900, color: "#0A1628", fontFamily: "Poppins" }}>
+                  <h2 style={{ fontSize: 28, fontWeight: 900, color: "#0A1628", fontFamily: "Poppins, sans-serif" }}>
                     Set new password
                   </h2>
                 </div>
@@ -356,7 +356,7 @@ export default function LoginClient() {
               <div style={{ marginBottom: 28 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                   <ShieldCheck size={22} color="#F5A800" />
-                  <h2 style={{ fontSize: 32, fontWeight: 700, color: "#0A1628", fontFamily: "Poppins" }}>
+                  <h2 style={{ fontSize: 32, fontWeight: 700, color: "#0A1628", fontFamily: "Poppins, sans-serif" }}>
                     Sign In
                   </h2>
                 </div>
@@ -384,7 +384,7 @@ export default function LoginClient() {
                   <input
                     type="text"
                     className="boc-input"
-                    style={{ fontFamily: "monospace" }}
+                    style={{ fontFamily: "Poppins, sans-serif" }}
                     placeholder="Enter your employee ID"
                     value={shortId}
                     onChange={(e) => setShortId(e.target.value)}
@@ -436,7 +436,7 @@ export default function LoginClient() {
                     color: "#0A1628", fontWeight: 800, fontSize: 16,
                     cursor: busy ? "not-allowed" : "pointer",
                     opacity: busy ? 0.7 : 1,
-                    fontFamily: "'Poppins'",
+                    fontFamily: "Poppins, sans-serif",
                   }}
                 >
                   {busy ? (
