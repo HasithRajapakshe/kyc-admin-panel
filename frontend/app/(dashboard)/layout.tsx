@@ -137,10 +137,10 @@ export default function DashboardLayout({
           >
             <span
               style={{
-                fontSize: 20,
+                fontSize: 24,
                 fontWeight: 900,
                 color: "#0A1628",
-                fontFamily: "Poppins",
+                fontFamily: "Poppins, sans-serif",
               }}
             >
               B
@@ -150,9 +150,9 @@ export default function DashboardLayout({
             <div
               style={{
                 fontWeight: 900,
-                fontSize: 14,
+                fontSize: 18,
                 color: "#fff",
-                fontFamily: "Poppins",
+                fontFamily: "Poppins, sans-serif",
                 lineHeight: 1,
               }}
             >
@@ -160,7 +160,7 @@ export default function DashboardLayout({
             </div>
             <div
               style={{
-                fontSize: 9,
+                fontSize: 11,
                 color: "#F5A800",
                 letterSpacing: 1.5,
                 textTransform: "uppercase",
@@ -191,7 +191,7 @@ export default function DashboardLayout({
               onClick={() => setMobileOpen(false)}
             >
               <div className={`nav-item${active ? " active" : ""}`}>
-                <item.icon size={15} style={{ flexShrink: 0 }} />
+                <item.icon size={18} style={{ flexShrink: 0 }} />
                 {item.label}
                 {active && (
                   <ChevronRight size={12} style={{ marginLeft: "auto" }} />
@@ -240,7 +240,7 @@ export default function DashboardLayout({
           <div style={{ minWidth: 0 }}>
             <div
               style={{
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: 600,
                 color: "#E2E8F0",
                 whiteSpace: "nowrap",
@@ -251,7 +251,7 @@ export default function DashboardLayout({
               {user.name}
             </div>
             <div
-              style={{ fontSize: 10, color: "#F5A800", fontWeight: 600 }}
+              style={{ fontSize: 12, color: "#F5A800", fontWeight: 600 }}
             >
               {ROLE_DISPLAY[user.role] ?? user.role}
             </div>
@@ -279,10 +279,10 @@ export default function DashboardLayout({
       }}
     >
       <aside
+        className="hidden md:flex"
         style={{
-          width: 240,
+          width: 280,
           flexShrink: 0,
-          display: "flex",
           flexDirection: "column",
         }}
       >
@@ -300,14 +300,14 @@ export default function DashboardLayout({
             onClick={() => setMobileOpen(false)}
           />
           <aside
+            className="flex md:hidden"
             style={{
               position: "absolute",
               left: 0,
               top: 0,
               bottom: 0,
-              width: 240,
+              width: 280,
               zIndex: 60,
-              display: "flex",
               flexDirection: "column",
             }}
           >
@@ -338,6 +338,7 @@ export default function DashboardLayout({
           }}
         >
           <button
+            className="md:hidden"
             onClick={() => setMobileOpen(!mobileOpen)}
             style={{
               background: "none",
@@ -350,7 +351,7 @@ export default function DashboardLayout({
           >
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
-          <span style={{ fontSize: 12, color: "#94A3B8" }}>
+          <span style={{ fontSize: 14, color: "#94A3B8" }}>
             🕐 {today}
           </span>
           <span style={{ color: "#E2E8F0" }}>|</span>
@@ -380,7 +381,7 @@ export default function DashboardLayout({
             FIU-SL Compliant
           </span>
           <div style={{ flex: 1 }} />
-          <span style={{ fontSize: 12, color: "#94A3B8" }}>
+          <span style={{ fontSize: 14, color: "#94A3B8" }}>
             {user.branch}
           </span>
         </header>
