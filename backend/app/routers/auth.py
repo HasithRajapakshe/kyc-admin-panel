@@ -111,7 +111,7 @@ def login(
         "short_id": user.short_id,
         "full_name": user.full_name,
         "email": user.email,
-        "role": user.role.value,
+        "role": _map_role(user.role.value),
         "branch": user.branch,
         "force_password_reset": user.force_password_reset
     }
@@ -133,7 +133,7 @@ def get_me(current_user: AdminUser = Depends(get_current_user)):
         "bank_id": current_user.bank_id,
         "full_name": current_user.full_name,
         "email": current_user.email,
-        "role": current_user.role.value,
+        "role": _map_role(current_user.role.value),
         "branch": current_user.branch,
         "force_password_reset": current_user.force_password_reset,
         "last_login": current_user.last_login
