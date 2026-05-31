@@ -83,7 +83,7 @@ function AddModal({
                         <div>
                             <h3
                                 style={{
-                                    fontFamily: "Georgia, serif",
+                                    fontFamily: "Poppins, sans-serif",
                                     fontSize: 16,
                                     fontWeight: 800,
                                     color: "#0A1628",
@@ -132,7 +132,7 @@ function AddModal({
                     </label>
                     <input
                         className="boc-input"
-                        style={{ fontFamily: "monospace" }}
+                        style={{ fontFamily: "Poppins, sans-serif" }}
                         placeholder="e.g. 982345678V"
                         value={nic}
                         onChange={(e) => setNic(e.target.value)}
@@ -193,7 +193,7 @@ function AddModal({
                             fontWeight: 600,
                             fontSize: 13,
                             cursor: "pointer",
-                            fontFamily: "'DM Sans', sans-serif",
+                            fontFamily: "Poppins, sans-serif",
                         }}
                     >
                         Cancel
@@ -212,7 +212,7 @@ function AddModal({
                             fontSize: 13,
                             cursor: busy ? "not-allowed" : "pointer",
                             opacity: busy ? 0.7 : 1,
-                            fontFamily: "'DM Sans', sans-serif",
+                            fontFamily: "Poppins, sans-serif",
                         }}
                     >
                         {busy ? "Adding…" : "Add to Watchlist"}
@@ -310,7 +310,7 @@ export default function WatchlistPage() {
                         boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
                         fontSize: 13,
                         fontWeight: 600,
-                        fontFamily: "'DM Sans', sans-serif",
+                        fontFamily: "Poppins, sans-serif",
                     }}
                 >
                     <div
@@ -343,7 +343,7 @@ export default function WatchlistPage() {
                             fontSize: 22,
                             fontWeight: 900,
                             color: "#0A1628",
-                            fontFamily: "Georgia, serif",
+                            fontFamily: "Poppins, sans-serif",
                             letterSpacing: -0.5,
                         }}
                     >
@@ -369,7 +369,7 @@ export default function WatchlistPage() {
                                 color: "#334155",
                                 fontSize: 12,
                                 cursor: "pointer",
-                                fontFamily: "'DM Sans', sans-serif",
+                                fontFamily: "Poppins, sans-serif",
                             }}
                         >
                             <Download size={13} /> Export
@@ -390,7 +390,7 @@ export default function WatchlistPage() {
                                 fontSize: 12,
                                 fontWeight: 700,
                                 cursor: "pointer",
-                                fontFamily: "'DM Sans', sans-serif",
+                                fontFamily: "Poppins, sans-serif",
                             }}
                         >
                             <Plus size={13} /> Add NIC
@@ -499,7 +499,7 @@ export default function WatchlistPage() {
                                         <td>
                                             <span
                                                 style={{
-                                                    fontFamily: "monospace",
+                                                    fontFamily: "Poppins, sans-serif",
                                                     fontSize: 13,
                                                     fontWeight: 700,
                                                     color: "#D97706",
@@ -522,7 +522,7 @@ export default function WatchlistPage() {
                                             <span
                                                 style={{
                                                     fontSize: 12,
-                                                    fontFamily: "monospace",
+                                                    fontFamily: "Poppins, sans-serif",
                                                     color: "#94A3B8",
                                                 }}
                                             >
@@ -553,7 +553,7 @@ export default function WatchlistPage() {
                                                         color: "#DC2626",
                                                         fontSize: 11,
                                                         fontWeight: 600,
-                                                        fontFamily: "'DM Sans', sans-serif",
+                                                        fontFamily: "Poppins, sans-serif",
                                                     }}
                                                 >
                                                     <Trash2 size={12} />
