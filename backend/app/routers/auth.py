@@ -16,6 +16,17 @@ import re
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 limiter = Limiter(key_func=get_remote_address)
 
+# Map DB role values → frontend role codes
+ROLE_MAP = {
+    "user": "USR",
+    "admin": "ADM",
+    "super_admin": "SAD",
+}
+
+
+def _map_role(role_value: str) -> str:
+    return ROLE_MAP.get(role_value, role_value)
+
 
 class LoginRequest(BaseModel):
     short_id: str
@@ -97,6 +108,7 @@ def login(
 
     return {
         "employee_id": user.employee_id,
+        "short_id": user.short_id,
         "full_name": user.full_name,
         "email": user.email,
         "role": user.role.value,
@@ -117,6 +129,7 @@ def get_me(current_user: AdminUser = Depends(get_current_user)):
     return {
         "id": current_user.id,
         "employee_id": current_user.employee_id,
+        "short_id": current_user.short_id,
         "bank_id": current_user.bank_id,
         "full_name": current_user.full_name,
         "email": current_user.email,

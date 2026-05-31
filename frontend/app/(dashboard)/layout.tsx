@@ -14,35 +14,22 @@ import {
   X,
   ChevronRight,
 } from "lucide-react";
-import { ROLE_LABELS } from "@/lib/utils";
 
 const NAV = [
-  {
-    href: "/",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    roles: ["USR", "ADM", "SAD"],
-  },
-  {
-    href: "/applications",
-    label: "Applications",
-    icon: FileText,
-    roles: ["USR", "ADM", "SAD"],
-    badge: true,
-  },
-  {
-    href: "/watchlist",
-    label: "Watchlist",
-    icon: ShieldAlert,
-    roles: ["USR", "ADM", "SAD"],
-  },
-  {
-    href: "/users",
-    label: "User Management",
-    icon: Users,
-    roles: ["SAD"],
-  },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/applications", label: "Applications", icon: FileText },
+  { href: "/watchlist", label: "Watchlist", icon: ShieldAlert },
+  { href: "/users", label: "User Management", icon: Users },
 ];
+
+const ROLE_DISPLAY: Record<string, string> = {
+  USR: "KYC Officer",
+  ADM: "Admin",
+  SAD: "Super Admin",
+  user: "KYC Officer",
+  admin: "Admin",
+  super_admin: "Super Admin",
+};
 
 export default function DashboardLayout({
   children,
@@ -50,11 +37,10 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { user, logout, loading } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Loading spinner
+  // Show spinner while loading auth
   if (loading) {
     return (
       <div
@@ -80,19 +66,31 @@ export default function DashboardLayout({
     );
   }
 
-  // Not logged in
+  // Not logged in — show nothing, auth.tsx handles redirect
   if (!user) {
-    router.replace("/login");
-    return null;
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#F4F6FA",
+        }}
+      >
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            border: "3px solid #F5A800",
+            borderTopColor: "transparent",
+            borderRadius: "50%",
+            animation: "spin 0.8s linear infinite",
+          }}
+        />
+      </div>
+    );
   }
-
-  // Force password reset
-  if (user.force_password_reset) {
-    router.replace("/login?reset=1");
-    return null;
-  }
-
-  const filtered = NAV.filter((n) => n.roles.includes(user.role));
 
   const today = new Date().toLocaleDateString("en-LK", {
     weekday: "short",
@@ -101,8 +99,7 @@ export default function DashboardLayout({
     day: "numeric",
   });
 
-  // Sidebar content — reused for desktop + mobile
-  const Sidebar = () => (
+  const SidebarContent = () => (
     <div
       style={{
         display: "flex",
@@ -111,7 +108,6 @@ export default function DashboardLayout({
         background: "#0A1628",
       }}
     >
-      {/* Gold top line */}
       <div
         style={{
           height: 4,
@@ -119,8 +115,6 @@ export default function DashboardLayout({
           flexShrink: 0,
         }}
       />
-
-      {/* Logo */}
       <div
         style={{
           padding: "18px 18px 14px",
@@ -146,8 +140,7 @@ export default function DashboardLayout({
                 fontSize: 20,
                 fontWeight: 900,
                 color: "#0A1628",
-                fontFamily: "Georgia, serif",
-                letterSpacing: -1,
+                fontFamily: "Poppins",
               }}
             >
               B
@@ -159,8 +152,7 @@ export default function DashboardLayout({
                 fontWeight: 900,
                 fontSize: 14,
                 color: "#fff",
-                fontFamily: "Georgia, serif",
-                letterSpacing: -0.5,
+                fontFamily: "Poppins",
                 lineHeight: 1,
               }}
             >
@@ -182,24 +174,20 @@ export default function DashboardLayout({
         </div>
       </div>
 
-      {/* Nav links */}
-      <nav
-        style={{
-          flex: 1,
-          padding: "10px 8px",
-          overflowY: "auto",
-        }}
-      >
-        {filtered.map((item) => {
+      <nav style={{ flex: 1, padding: "10px 8px", overflowY: "auto" }}>
+        {NAV.map((item) => {
           const active =
             pathname === item.href ||
             (item.href !== "/" && pathname.startsWith(item.href));
-
           return (
             <Link
               key={item.href}
               href={item.href}
-              style={{ textDecoration: "none", display: "block", marginBottom: 2 }}
+              style={{
+                textDecoration: "none",
+                display: "block",
+                marginBottom: 2,
+              }}
               onClick={() => setMobileOpen(false)}
             >
               <div className={`nav-item${active ? " active" : ""}`}>
@@ -214,7 +202,6 @@ export default function DashboardLayout({
         })}
       </nav>
 
-      {/* User footer */}
       <div
         style={{
           padding: "10px 8px",
@@ -222,7 +209,6 @@ export default function DashboardLayout({
           flexShrink: 0,
         }}
       >
-        {/* User info card */}
         <div
           style={{
             display: "flex",
@@ -249,7 +235,7 @@ export default function DashboardLayout({
               flexShrink: 0,
             }}
           >
-            {user.name.charAt(0)}
+            {user.name?.charAt(0) ?? "A"}
           </div>
           <div style={{ minWidth: 0 }}>
             <div
@@ -265,18 +251,12 @@ export default function DashboardLayout({
               {user.name}
             </div>
             <div
-              style={{
-                fontSize: 10,
-                color: "#F5A800",
-                fontWeight: 600,
-              }}
+              style={{ fontSize: 10, color: "#F5A800", fontWeight: 600 }}
             >
-              {ROLE_LABELS[user.role] ?? user.role}
+              {ROLE_DISPLAY[user.role] ?? user.role}
             </div>
           </div>
         </div>
-
-        {/* Sign out */}
         <button
           onClick={logout}
           className="nav-item"
@@ -298,7 +278,6 @@ export default function DashboardLayout({
         background: "#F4F6FA",
       }}
     >
-      {/* Desktop sidebar */}
       <aside
         style={{
           width: 240,
@@ -307,18 +286,11 @@ export default function DashboardLayout({
           flexDirection: "column",
         }}
       >
-        <Sidebar />
+        <SidebarContent />
       </aside>
 
-      {/* Mobile sidebar overlay */}
       {mobileOpen && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 50,
-          }}
-        >
+        <div style={{ position: "fixed", inset: 0, zIndex: 50 }}>
           <div
             style={{
               position: "absolute",
@@ -339,12 +311,11 @@ export default function DashboardLayout({
               flexDirection: "column",
             }}
           >
-            <Sidebar />
+            <SidebarContent />
           </aside>
         </div>
       )}
 
-      {/* Main content area */}
       <div
         style={{
           flex: 1,
@@ -354,7 +325,6 @@ export default function DashboardLayout({
           overflow: "hidden",
         }}
       >
-        {/* Topbar */}
         <header
           style={{
             height: 56,
@@ -367,7 +337,6 @@ export default function DashboardLayout({
             flexShrink: 0,
           }}
         >
-          {/* Mobile menu toggle */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             style={{
@@ -381,15 +350,10 @@ export default function DashboardLayout({
           >
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
-
-          {/* Date */}
           <span style={{ fontSize: 12, color: "#94A3B8" }}>
             🕐 {today}
           </span>
-
           <span style={{ color: "#E2E8F0" }}>|</span>
-
-          {/* System status */}
           <span
             style={{
               background: "#DCFCE7",
@@ -402,8 +366,6 @@ export default function DashboardLayout({
           >
             ● System Online
           </span>
-
-          {/* Compliance badge */}
           <span
             style={{
               background: "#F1F5F9",
@@ -417,23 +379,13 @@ export default function DashboardLayout({
           >
             FIU-SL Compliant
           </span>
-
           <div style={{ flex: 1 }} />
-
-          {/* Branch */}
           <span style={{ fontSize: 12, color: "#94A3B8" }}>
             {user.branch}
           </span>
         </header>
 
-        {/* Page content */}
-        <main
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            padding: 26,
-          }}
-        >
+        <main style={{ flex: 1, overflowY: "auto", padding: 26 }}>
           {children}
         </main>
       </div>

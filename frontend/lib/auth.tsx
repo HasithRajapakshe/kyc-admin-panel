@@ -26,7 +26,7 @@ export interface AuthUser {
 interface AuthCtx {
   user: AuthUser | null;
   loading: boolean;
-  login: (employee_id: string, password: string) => Promise<void>;
+  login: (short_id: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
   isAdmin: boolean;
@@ -37,31 +37,37 @@ const Ctx = createContext<AuthCtx | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   const refresh = async () => {
     try {
       const res = await authApi.me();
-      setUser(res.data);
+      const data = res.data;
+      setUser({
+        ...data,
+        name: data.full_name ?? data.name ?? "Admin",
+      });
     } catch {
       setUser(null);
+    } finally {
+      setLoading(false);
     }
   };
 
+  useEffect(() => {
+    refresh();
+  }, []);
+
   const login = async (short_id: string, password: string) => {
-    const res = await authApi.login(short_id, password);
-    const u: AuthUser = {
-  ...res.data,
-  name: res.data.full_name ?? res.data.name ?? "Admin",
-};
-    setUser(u);
-    if (u.force_password_reset) {
-      router.push("/login?reset=1");
-    } else {
-      router.push("/");
-    }
+  const res = await authApi.login(short_id, password);
+  const data = res.data;
+  const u: AuthUser = {
+    ...data,
+    name: data.full_name ?? data.name ?? "Admin",
   };
+  setUser(u);
+};
 
   const logout = async () => {
     await authApi.logout().catch(() => {});
