@@ -17,6 +17,7 @@ interface App {
     session_id: string;
     full_name?: string;
     nic_number?: string;
+    phone_number?: string;
     email?: string;
     verification_status: string;
     created_at: string;
@@ -159,7 +160,7 @@ export default function ApplicationsPage() {
     const totalPages = Math.ceil(total / PAGE_SIZE);
 
     return (
-        <div style={{ maxWidth: 1200 }}>
+        <div style={{ width: "100%", paddingRight: 16 }}>
             {/* Header */}
             <div
                 style={{
@@ -282,6 +283,7 @@ export default function ApplicationsPage() {
                                 <th>Application ID</th>
                                 <th>Customer</th>
                                 <th>NIC</th>
+                                <th>Phone</th>
                                 <th>Submitted</th>
                                 <th>Status</th>
                                 <th>Risk</th>
@@ -294,7 +296,7 @@ export default function ApplicationsPage() {
                             {loading ? (
                                 Array.from({ length: 6 }).map((_, i) => (
                                     <tr key={i}>
-                                        {Array.from({ length: 9 }).map((_, j) => (
+                                        {Array.from({ length: 10 }).map((_, j) => (
                                             <td key={j}>
                                                 <div
                                                     style={{
@@ -313,7 +315,7 @@ export default function ApplicationsPage() {
                             ) : items.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={9}
+                                        colSpan={10}
                                         style={{
                                             textAlign: "center",
                                             padding: "60px 0",
@@ -380,6 +382,13 @@ export default function ApplicationsPage() {
                                                 style={{ fontFamily: "Poppins, sans-serif", fontSize: 12 }}
                                             >
                                                 {maskNic(app.nic_number)}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span
+                                                style={{ fontFamily: "Poppins, sans-serif", fontSize: 12 }}
+                                            >
+                                                {app.phone_number ?? "—"}
                                             </span>
                                         </td>
                                         <td style={{ fontSize: 12 }}>

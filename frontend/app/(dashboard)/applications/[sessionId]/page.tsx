@@ -635,7 +635,7 @@ export default function AppDetailPage() {
     const isPending = data.status === "pending" || data.status === "reviewing";
 
     return (
-        <div style={{ maxWidth: 1100 }}>
+        <div style={{ width: "100%", paddingRight: 16 }}>
             {/* Toast */}
             {toast && (
                 <div style={{

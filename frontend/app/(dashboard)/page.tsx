@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { dashboardApi } from "@/lib/api";
+import Link from "next/link";
+import { dashboardApi, applicationsApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
   FileText,
@@ -12,7 +13,9 @@ import {
   AlertTriangle,
   Smartphone,
   RefreshCw,
+  ChevronRight,
 } from "lucide-react";
+import { formatDateTime, maskNic } from "@/lib/utils";
 
 interface KPIs {
   total_applications: number;
@@ -23,6 +26,23 @@ interface KPIs {
   approval_rate: number;
   high_risk: number;
   otp_verified: number;
+}
+
+function StatusBadge({ status }: { status?: string }) {
+  if (!status) return null;
+  const cfg: Record<string, { bg: string; color: string; dot: string }> = {
+    pending: { bg: "#FEF3C7", color: "#92400E", dot: "#F59E0B" },
+    approved: { bg: "#DCFCE7", color: "#14532D", dot: "#22C55E" },
+    rejected: { bg: "#FEE2E2", color: "#7F1D1D", dot: "#EF4444" },
+    reviewing: { bg: "#DBEAFE", color: "#1E3A8A", dot: "#3B82F6" },
+  };
+  const c = cfg[status] ?? cfg.pending;
+  return (
+    <span style={{ background: c.bg, color: c.color, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 5 }}>
+      <span style={{ width: 5, height: 5, borderRadius: "50%", background: c.dot, display: "inline-block" }} />
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
+  );
 }
 
 function KpiCard({
@@ -52,7 +72,6 @@ function KpiCard({
         overflow: "hidden",
       }}
     >
-      {/* Corner gradient */}
       <div
         style={{
           position: "absolute",
@@ -88,7 +107,7 @@ function KpiCard({
       </div>
       <div
         style={{
-          fontSize: 30,
+          fontSize: 34,
           fontWeight: 900,
           color: "#0A1628",
           lineHeight: 1,
@@ -101,7 +120,7 @@ function KpiCard({
       </div>
       <div
         style={{
-          fontSize: 11,
+          fontSize: 13,
           color: "#94A3B8",
           marginTop: 8,
           position: "relative",
@@ -146,15 +165,20 @@ function EmptyState() {
 export default function DashboardPage() {
   const { user } = useAuth();
   const [kpis, setKpis] = useState<KPIs | null>(null);
+  const [recentApps, setRecentApps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [error, setError] = useState(false);
 
-  const fetchKpis = useCallback(async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setError(false);
-      const res = await dashboardApi.kpis();
-      setKpis(res.data);
+      const [kpisRes, appsRes] = await Promise.all([
+        dashboardApi.kpis(),
+        applicationsApi.list({ limit: 5 })
+      ]);
+      setKpis(kpisRes.data);
+      setRecentApps(appsRes.data?.items ?? []);
       setLastRefresh(new Date());
     } catch (e) {
       setError(true);
@@ -165,11 +189,11 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    fetchKpis();
+    fetchDashboardData();
     // Auto refresh every 30 seconds
-    const interval = setInterval(fetchKpis, 30_000);
+    const interval = setInterval(fetchDashboardData, 30_000);
     return () => clearInterval(interval);
-  }, [fetchKpis]);
+  }, [fetchDashboardData]);
 
   const row1 = kpis
     ? [
@@ -248,7 +272,7 @@ export default function DashboardPage() {
     : [];
 
   return (
-    <div style={{ maxWidth: 1200 }}>
+    <div style={{ width: "100%", paddingRight: 16 }}>
       {/* Header */}
       <div
         style={{
@@ -275,7 +299,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <button
-          onClick={fetchKpis}
+          onClick={fetchDashboardData}
           style={{
             display: "flex",
             alignItems: "center",
@@ -387,51 +411,92 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          {/* Info banner */}
-          <div
-            style={{
-              background: "#fff",
-              border: "1px solid #E2E8F0",
-              borderRadius: 14,
-              padding: "20px 24px",
-              display: "flex",
-              alignItems: "center",
-              gap: 16,
-            }}
-          >
+          {/* Bottom Grid: Recent Applications & Info Banner */}
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16 }}>
+            {/* Recent Applications Table */}
             <div
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: 10,
-                background: "linear-gradient(135deg, #F5A800, #C98B00)",
+                background: "#fff",
+                border: "1px solid #E2E8F0",
+                borderRadius: 14,
+                padding: "20px 24px",
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
+                flexDirection: "column",
               }}
             >
-              <span style={{ fontSize: 26 }}>🏦</span>
-            </div>
-            <div>
-              <div
-                style={{
-                  fontSize: 16,
-                  fontWeight: 700,
-                  color: "#0A1628",
-                  fontFamily: "Poppins, sans-serif",
-                }}
-              >
-                Bank of Ceylon — KYC Admin Portal
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0A1628", fontFamily: "Poppins, sans-serif" }}>Recent Applications</h3>
+                <Link href="/applications" style={{ fontSize: 12, color: "#2563EB", textDecoration: "none", display: "flex", alignItems: "center", gap: 4, fontWeight: 600 }}>
+                  View All <ChevronRight size={14} />
+                </Link>
               </div>
-              <div style={{ fontSize: 13, color: "#94A3B8", marginTop: 3 }}>
-                Connected to AI KYC model · CBSL & FIU-SL Compliant ·
-                Last refreshed:{" "}
-                {lastRefresh.toLocaleTimeString("en-LK", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  second: "2-digit",
-                })}
+              
+              {recentApps.length === 0 ? (
+                <div style={{ padding: 30, textAlign: "center", color: "#94A3B8", fontSize: 13 }}>
+                  No recent applications found.
+                </div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table className="boc-table">
+                    <thead>
+                      <tr>
+                        <th>Application ID</th>
+                        <th>Customer</th>
+                        <th>Submitted</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentApps.map((app) => (
+                        <tr key={app.session_id}>
+                          <td>
+                            <Link href={`/applications/${app.session_id}`} style={{ color: "#2563EB", textDecoration: "none", fontWeight: 600 }}>
+                              {app.session_id.substring(0, 15)}...
+                            </Link>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 600 }}>{app.full_name || "—"}</div>
+                            <div style={{ fontSize: 11, color: "#94A3B8" }}>{maskNic(app.nic_number)}</div>
+                          </td>
+                          <td style={{ fontSize: 12 }}>{formatDateTime(app.created_at)}</td>
+                          <td><StatusBadge status={app.verification_status} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Actions & System Info */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+
+              {/* Quick Actions */}
+              <div style={{
+                background: "#fff",
+                border: "1px solid #E2E8F0",
+                borderRadius: 14,
+                padding: "20px 24px",
+              }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0A1628", fontFamily: "Poppins, sans-serif", marginBottom: 16 }}>Quick Actions</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <Link href="/applications?status=pending" style={{ textDecoration: "none" }}>
+                    <div style={{ padding: "12px 16px", background: "#F8FAFC", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#0A1628", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid #E2E8F0", transition: "all 0.2s" }} className="kpi-card">
+                      Review Pending Apps <ChevronRight size={14} color="#94A3B8" />
+                    </div>
+                  </Link>
+                  <Link href="/watchlist" style={{ textDecoration: "none" }}>
+                    <div style={{ padding: "12px 16px", background: "#F8FAFC", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#0A1628", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid #E2E8F0", transition: "all 0.2s" }} className="kpi-card">
+                      Manage Watchlist <ChevronRight size={14} color="#94A3B8" />
+                    </div>
+                  </Link>
+                  <Link href="/users" style={{ textDecoration: "none" }}>
+                    <div style={{ padding: "12px 16px", background: "#F8FAFC", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#0A1628", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid #E2E8F0", transition: "all 0.2s" }} className="kpi-card">
+                      User Management <ChevronRight size={14} color="#94A3B8" />
+                    </div>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>

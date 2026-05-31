@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   FileText,
@@ -39,6 +39,18 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const { user, logout, loading } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [currentTime, setCurrentTime] = useState("");
+
+  useEffect(() => {
+    setMounted(true);
+    const updateTime = () => {
+      setCurrentTime(new Date().toLocaleTimeString("en-LK", { hour: "2-digit", minute: "2-digit" }));
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Show spinner while loading auth
   if (loading) {
@@ -386,8 +398,79 @@ export default function DashboardLayout({
           </span>
         </header>
 
-        <main style={{ flex: 1, overflowY: "auto", padding: 26 }}>
-          {children}
+        <main style={{ flex: 1, overflowY: "auto", padding: 26, position: "relative", display: "flex", flexDirection: "column" }}>
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              pointerEvents: "none",
+              backgroundImage: "url('/boclogo.jpg')",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center",
+              backgroundSize: "50%",
+              opacity: 0.04,
+              zIndex: 0,
+            }}
+          />
+          <div style={{ position: "relative", zIndex: 1, flex: 1, marginBottom: 24 }}>
+            {children}
+          </div>
+
+          {mounted && (
+            <div
+              style={{
+                background: "#fff",
+                border: "1px solid #E2E8F0",
+                borderRadius: 14,
+                padding: "20px 24px",
+                display: "flex",
+                alignItems: "center",
+                gap: 16,
+                position: "relative",
+                zIndex: 1,
+                marginTop: "auto",
+              }}
+            >
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 10,
+                  background: "linear-gradient(135deg, #F5A800, #C98B00)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <span style={{ fontSize: 26 }}>🏦</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 20, flex: 1, flexWrap: "wrap" }}>
+                <div
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 700,
+                    color: "#0A1628",
+                    fontFamily: "Poppins, sans-serif",
+                  }}
+                >
+                  Bank of Ceylon — KYC Admin
+                </div>
+                
+                <div style={{ width: 1, height: 16, background: "#E2E8F0" }} />
+                
+                <div style={{ fontSize: 14, color: "#64748B", fontWeight: 500 }}>
+                  CBSL & FIU-SL Compliant
+                </div>
+                
+                <div style={{ flex: 1 }} />
+                
+                <div style={{ fontSize: 13, color: "#94A3B8", fontWeight: 500 }}>
+                  Updated: {currentTime}
+                </div>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>

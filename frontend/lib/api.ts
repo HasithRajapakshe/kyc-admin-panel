@@ -67,10 +67,8 @@ export const watchlistApi = {
     api.get("/api/watchlist", { params }),
 
   add: (data: {
-    nic: string;
-    name?: string;
+    nic_number: string;
     reason: string;
-    category?: string;
   }) => api.post("/api/watchlist", data),
 
   remove: (id: number) =>
