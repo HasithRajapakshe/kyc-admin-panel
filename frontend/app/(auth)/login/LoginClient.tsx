@@ -14,17 +14,17 @@ export default function LoginClient() {
 
   // Login fields
   const [shortId, setShortId] = useState("");
-  const [password, setPassword]     = useState("");
-  const [showPass, setShowPass]     = useState(false);
+  const [password, setPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
 
   // Reset fields
-  const [currentPw, setCurrentPw]   = useState("");
-  const [newPw, setNewPw]           = useState("");
-  const [confirmPw, setConfirmPw]   = useState("");
-  const [showNew, setShowNew]       = useState(false);
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [showNew, setShowNew] = useState(false);
 
   const [error, setError] = useState("");
-  const [busy, setBusy]   = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!loading && user && !user.force_password_reset) {
@@ -38,6 +38,7 @@ export default function LoginClient() {
     setBusy(true);
     try {
       await login(shortId.trim(), password);
+      router.push("/");
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })
@@ -76,36 +77,36 @@ export default function LoginClient() {
   }
 
   if (loading) {
-  return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#0A1628",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
+    return (
       <div
         style={{
-          width: 36,
-          height: 36,
-          border: "3px solid #F5A800",
-          borderTopColor: "transparent",
-          borderRadius: "50%",
-          animation: "spin 0.8s linear infinite",
+          minHeight: "100vh",
+          background: "#0A1628",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
-      />
-    </div>
-  );
-}
+      >
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            border: "3px solid #F5A800",
+            borderTopColor: "transparent",
+            borderRadius: "50%",
+            animation: "spin 0.8s linear infinite",
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div
       style={{
         minHeight: "100vh",
         display: "flex",
-        fontFamily: "'DM Sans', system-ui, sans-serif",
+        fontFamily: "'Poppins'",
       }}
     >
       {/* ── Left Panel — BOC Navy ── */}
@@ -148,7 +149,7 @@ export default function LoginClient() {
               <span
                 style={{
                   fontSize: 28, fontWeight: 900, color: "#0A1628",
-                  fontFamily: "Georgia, serif", letterSpacing: -1,
+                  fontFamily: "Poppins", letterSpacing: -1,
                 }}
               >
                 B
@@ -157,8 +158,8 @@ export default function LoginClient() {
             <div>
               <div
                 style={{
-                  fontWeight: 900, fontSize: 18, color: "#fff",
-                  fontFamily: "Georgia, serif", letterSpacing: -0.5,
+                  fontWeight: 700, fontSize: 20, color: "#fff",
+                  fontFamily: "Poppins", letterSpacing: -0.5,
                 }}
               >
                 Bank of Ceylon
@@ -175,31 +176,31 @@ export default function LoginClient() {
           </div>
 
           {/* Heading */}
-          <div style={{ marginTop: 56 }}>
+          <div style={{ marginTop: 100 }}>
             <h1
               style={{
-                fontSize: 32, fontWeight: 900, color: "#fff",
-                fontFamily: "Georgia, serif", lineHeight: 1.2, letterSpacing: -0.5,
+                fontSize: 50, fontWeight: 700, color: "#fff",
+                fontFamily: "Poppins", lineHeight: 1.3, letterSpacing: 0.5,
               }}
             >
               Digital KYC<br />Administration
             </h1>
-            <p style={{ fontSize: 14, color: "#64748B", marginTop: 14, lineHeight: 1.7 }}>
+            <p style={{ fontSize: 17, color: "#adbcd1ff", marginTop: 14, lineHeight: 1.7 }}>
               Secure onboarding management for authorised Bank of Ceylon personnel only.
             </p>
           </div>
 
           {/* Features */}
-          <div style={{ marginTop: 40, display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ marginTop: 70, display: "flex", flexDirection: "column", gap: 18 }}>
             {[
-              { icon: "🏛️", text: "CBSL & FIU-SL Compliant" },
-              { icon: "🔒", text: "Role-based access control" },
-              { icon: "📋", text: "Full audit trail on all actions" },
-              { icon: "🤖", text: "AI-powered risk screening" },
+              { icon: "/bank-icon.png", text: "CBSL & FIU-SL Compliant" },
+              { icon: "/bank-icon.png", text: "Role based access control" },
+              { icon: "/bank-icon.png", text: "Full audit trail on all actions" },
+              { icon: "/bank-icon.png", text: "AI-powered risk screening" },
             ].map((f) => (
               <div key={f.text} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 16 }}>{f.icon}</span>
-                <span style={{ fontSize: 13, color: "#94A3B8" }}>{f.text}</span>
+                <img src={f.icon} alt="icon" style={{ width: 23, height: 23, objectFit: "contain" }} />
+                <span style={{ fontSize: 15, color: "#94A3B8" }}>{f.text}</span>
               </div>
             ))}
           </div>
@@ -228,14 +229,20 @@ export default function LoginClient() {
       <div
         style={{
           flex: 1,
-          background: "#F4F6FA",
+          background: "linear-gradient(135deg, #F4F6FA 0%, #E2E8F0 100%)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           padding: 48,
+          position: "relative",
+          overflow: "hidden",
         }}
       >
-        <div style={{ width: "100%", maxWidth: 420 }}>
+        {/* Decorative background blobs to enhance glass effect */}
+        <div style={{ position: "absolute", top: "5%", right: "5%", width: 350, height: 350, background: "#FCD34D", borderRadius: "50%", filter: "blur(80px)", opacity: 0.4, zIndex: 0 }} />
+        <div style={{ position: "absolute", bottom: "5%", left: "5%", width: 350, height: 350, background: "#93C5FD", borderRadius: "50%", filter: "blur(80px)", opacity: 0.4, zIndex: 0 }} />
+
+        <div style={{ width: "100%", maxWidth: 480, position: "relative", zIndex: 1 }}>
 
           {isReset ? (
             /* ── Force password reset form ── */
@@ -245,11 +252,11 @@ export default function LoginClient() {
                   <div style={{ padding: 8, borderRadius: 8, background: "#FEF3C7", border: "1px solid #FCD34D" }}>
                     <Lock size={18} color="#D97706" />
                   </div>
-                  <h2 style={{ fontSize: 22, fontWeight: 900, color: "#0A1628", fontFamily: "Georgia, serif" }}>
+                  <h2 style={{ fontSize: 28, fontWeight: 900, color: "#0A1628", fontFamily: "Poppins" }}>
                     Set new password
                   </h2>
                 </div>
-                <p style={{ fontSize: 13, color: "#94A3B8" }}>
+                <p style={{ fontSize: 15, color: "#94A3B8" }}>
                   You must change your password before continuing.
                 </p>
               </div>
@@ -257,14 +264,17 @@ export default function LoginClient() {
               <form
                 onSubmit={handleReset}
                 style={{
-                  background: "#fff", borderRadius: 16, padding: 32,
-                  border: "1px solid #E2E8F0",
-                  boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
+                  background: "rgba(255, 255, 255, 0.45)",
+                  backdropFilter: "blur(12px)",
+                  WebkitBackdropFilter: "blur(12px)",
+                  borderRadius: 16, padding: 40,
+                  border: "1px solid rgba(255, 255, 255, 0.8)",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.06)",
                 }}
               >
                 {/* Current password */}
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#334155", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 6 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#334155", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 6 }}>
                     Current password <span style={{ color: "#DC2626" }}>*</span>
                   </label>
                   <input
@@ -279,7 +289,7 @@ export default function LoginClient() {
 
                 {/* New password */}
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#334155", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 6 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#334155", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 6 }}>
                     New password <span style={{ color: "#DC2626" }}>*</span>
                   </label>
                   <div style={{ position: "relative" }}>
@@ -306,7 +316,7 @@ export default function LoginClient() {
 
                 {/* Confirm password */}
                 <div style={{ marginBottom: 20 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#334155", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 6 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#334155", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 6 }}>
                     Confirm new password <span style={{ color: "#DC2626" }}>*</span>
                   </label>
                   <input
@@ -329,9 +339,9 @@ export default function LoginClient() {
                   disabled={busy}
                   className="boc-btn"
                   style={{
-                    width: "100%", padding: "11px", borderRadius: 9, border: "none",
+                    width: "100%", padding: "14px", borderRadius: 9, border: "none",
                     background: "linear-gradient(135deg, #F5A800, #C98B00)",
-                    color: "#0A1628", fontWeight: 700, fontSize: 14,
+                    color: "#0A1628", fontWeight: 700, fontSize: 16,
                     cursor: busy ? "not-allowed" : "pointer",
                     opacity: busy ? 0.7 : 1,
                   }}
@@ -346,11 +356,11 @@ export default function LoginClient() {
               <div style={{ marginBottom: 28 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                   <ShieldCheck size={22} color="#F5A800" />
-                  <h2 style={{ fontSize: 26, fontWeight: 900, color: "#0A1628", fontFamily: "Georgia, serif" }}>
-                    Sign in
+                  <h2 style={{ fontSize: 32, fontWeight: 700, color: "#0A1628", fontFamily: "Poppins" }}>
+                    Sign In
                   </h2>
                 </div>
-                <p style={{ fontSize: 13, color: "#94A3B8" }}>
+                <p style={{ fontSize: 15, color: "#94A3B8" }}>
                   Authorised personnel only. All access is logged.
                 </p>
               </div>
@@ -358,21 +368,24 @@ export default function LoginClient() {
               <form
                 onSubmit={handleLogin}
                 style={{
-                  background: "#fff", borderRadius: 16, padding: 32,
-                  border: "1px solid #E2E8F0",
-                  boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
+                  background: "rgba(255, 255, 255, 0.45)",
+                  backdropFilter: "blur(12px)",
+                  WebkitBackdropFilter: "blur(12px)",
+                  borderRadius: 16, padding: 40,
+                  border: "1px solid rgba(255, 255, 255, 0.8)",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.06)",
                 }}
               >
                 {/* Employee ID */}
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#334155", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 6 }}>
-                    Employee Short ID <span style={{ color: "#DC2626" }}>*</span>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#334155", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 6 }}>
+                    Employee ID <span style={{ color: "#DC2626" }}>*</span>
                   </label>
                   <input
                     type="text"
                     className="boc-input"
                     style={{ fontFamily: "monospace" }}
-                    placeholder="e.g. sad001"
+                    placeholder="Enter your employee ID"
                     value={shortId}
                     onChange={(e) => setShortId(e.target.value)}
                     required
@@ -383,7 +396,7 @@ export default function LoginClient() {
 
                 {/* Password */}
                 <div style={{ marginBottom: 24 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#334155", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 6 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#334155", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 6 }}>
                     Password <span style={{ color: "#DC2626" }}>*</span>
                   </label>
                   <div style={{ position: "relative" }}>
@@ -418,12 +431,12 @@ export default function LoginClient() {
                   disabled={busy}
                   className="boc-btn"
                   style={{
-                    width: "100%", padding: "12px", borderRadius: 9, border: "none",
+                    width: "100%", padding: "14px", borderRadius: 9, border: "none",
                     background: "linear-gradient(135deg, #F5A800, #C98B00)",
-                    color: "#0A1628", fontWeight: 800, fontSize: 14,
+                    color: "#0A1628", fontWeight: 800, fontSize: 16,
                     cursor: busy ? "not-allowed" : "pointer",
                     opacity: busy ? 0.7 : 1,
-                    fontFamily: "'DM Sans', sans-serif",
+                    fontFamily: "'Poppins'",
                   }}
                 >
                   {busy ? (
@@ -436,8 +449,8 @@ export default function LoginClient() {
                   )}
                 </button>
 
-                <div style={{ textAlign: "center", marginTop: 16, fontSize: 11, color: "#94A3B8" }}>
-                  Secured by TLS 1.3 · AES-256 encryption at rest
+                <div style={{ textAlign: "center", marginTop: 16, fontSize: 13, color: "#94A3B8" }}>
+
                 </div>
               </form>
             </>

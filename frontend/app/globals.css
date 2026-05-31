@@ -24,7 +24,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: 'Poppins';
   background: var(--bg-page);
   color: var(--navy);
 }
@@ -60,9 +60,9 @@ body {
   width: 100%;
   border: 1.5px solid var(--border);
   border-radius: 9px;
-  padding: 10px 14px;
-  font-size: 13px;
-  font-family: 'DM Sans', sans-serif;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-family: 'Poppins';
   color: var(--navy);
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -109,7 +109,7 @@ body {
   background: transparent;
   text-align: left;
   transition: all 0.15s;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Poppins';
   font-weight: 400;
   text-decoration: none;
 }
@@ -129,7 +129,7 @@ body {
   font-size: 12px;
   font-weight: 500;
   transition: all 0.15s;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Poppins';
   background: transparent;
   color: var(--slate-mid);
 }
@@ -141,7 +141,7 @@ body {
 .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
 
 /* BOC Button */
-.boc-btn { transition: all 0.2s; font-family: 'DM Sans', sans-serif; }
+.boc-btn { transition: all 0.2s; font-family: 'Poppins'; }
 .boc-btn:hover { filter: brightness(1.08); }
 .boc-btn:active { transform: scale(0.98); }
 
