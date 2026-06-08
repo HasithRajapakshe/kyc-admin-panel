@@ -13,10 +13,11 @@ router = APIRouter(prefix="/api/users", tags=["users"])
 class CreateUserRequest(BaseModel):
     full_name: str
     email: EmailStr
-    bank_id: str         # Bank's own staff ID — typed by super admin
-    branch: str          # Branch name e.g. "Colombo Main"
-    role: str            # "user" or "admin"
-    password: str        # Initial password set by super admin
+    short_id: str
+    bank_id: str
+    branch: str
+    role: str
+    password: str       # Initial password set by super admin
 
 
 class UpdateUserRequest(BaseModel):
@@ -81,6 +82,7 @@ def create_user(
 
     user = AdminUser(
         employee_id=employee_id,
+        short_id=req.short_id,
         bank_id=req.bank_id,
         full_name=req.full_name,
         email=req.email,

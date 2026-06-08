@@ -376,16 +376,16 @@ export default function LoginClient() {
                   boxShadow: "0 8px 32px rgba(0,0,0,0.06)",
                 }}
               >
-                {/* Employee ID */}
+                {/* Short ID */}
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#334155", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 6 }}>
-                    Employee ID <span style={{ color: "#DC2626" }}>*</span>
+                    Short ID <span style={{ color: "#DC2626" }}>*</span>
                   </label>
                   <input
                     type="text"
                     className="boc-input"
                     style={{ fontFamily: "Poppins, sans-serif" }}
-                    placeholder="Enter your employee ID"
+                    placeholder="Enter your Short ID"
                     value={shortId}
                     onChange={(e) => setShortId(e.target.value)}
                     required
