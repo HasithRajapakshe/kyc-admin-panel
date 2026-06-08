@@ -19,66 +19,65 @@ import {
 } from "lucide-react";
 import { formatDateTime, formatDate } from "@/lib/utils";
 
-interface Detail {
-    session_id: string;
-    status: string;
-    created_at: string;
-    updated_at?: string;
-    ai_confidence_score?: number;
-    risk_score?: number;
-    rejection_reason?: string;
-    approval_reason?: string;
-    customer?: {
-        name?: string;
-        nic?: string;
-        dob?: string;
+// ── Types matching backend response ──────────────────
+interface BackendDetail {
+    customer: {
+        id: number;
+        session_id: string;
+        full_name: string;
+        nic_number: string;
+        date_of_birth?: string;
         age?: number;
         gender?: string;
-        phone?: string;
-        email?: string;
         address?: string;
-        language?: string;
-        purpose?: string;
-    };
-    documents?: Array<{
-        doc_type: string;
-        file_url?: string;
-        verified?: boolean;
-        quality_score?: number;
-        ocr_data?: Record<string, string>;
-    }>;
-    biometrics?: {
-        selfie_url?: string;
-        liveness_passed?: boolean;
-        face_match_score?: number;
-        liveness_score?: number;
-        spoof_clear?: boolean;
-    };
-    signature?: {
-        signature_url?: string;
-        captured_at?: string;
-        type?: string;
-    };
-    session_logs?: Array<{
-        event: string;
-        timestamp: string;
-        step?: string;
-        score?: number;
-        result?: string;
-    }>;
-    account?: {
-        account_type?: string;
+        phone_number?: string;
+        email?: string;
+        otp_verified: boolean;
+        otp_attempts: number;
+        selfie_image?: string;
+        account_purpose?: string;
         account_number?: string;
-        branch?: string;
-        currency?: string;
-        created_at?: string;
+        verification_status: string;
+        risk_score?: string | number;
+        created_at: string;
+        updated_at: string;
     };
-    otp?: {
-        verified?: boolean;
-        phone?: string;
-        attempts?: number;
-        sent_at?: string;
-    };
+    sessions: Array<{
+        session_id: string;
+        language: string;
+        status: string;
+        started_at: string;
+        completed_at?: string;
+        name_verified: boolean;
+    }>;
+    logs: Array<{
+        step: string;
+        action: string;
+        result: string;
+        details?: string;
+        confidence_score?: string;
+        timestamp: string;
+    }>;
+    documents: Array<{
+        id: number;
+        type: string;
+        file_path: string;
+        file_size: number;
+        quality_score?: string;
+        uploaded_at: string;
+    }>;
+    signatures: Array<{
+        type: string;
+        data: string;
+        created_at: string;
+    }>;
+    accounts: Array<{
+        account_number: string;
+        account_type: string;
+        branch: string;
+        status: string;
+        created_at: string;
+    }>;
 }
 
 const TABS = [
@@ -91,19 +90,21 @@ const TABS = [
     { id: "account", label: "Account", icon: CreditCard },
 ];
 
-function StatusBadge({ status }: { status?: string }) {
-    if (!status) return null;
+function StatusBadge({ status }: { status: string }) {
     const cfg: Record<string, { bg: string; color: string; dot: string }> = {
         pending: { bg: "#FEF3C7", color: "#92400E", dot: "#F59E0B" },
         approved: { bg: "#DCFCE7", color: "#14532D", dot: "#22C55E" },
         rejected: { bg: "#FEE2E2", color: "#7F1D1D", dot: "#EF4444" },
         reviewing: { bg: "#DBEAFE", color: "#1E3A8A", dot: "#3B82F6" },
+        completed: { bg: "#DBEAFE", color: "#1E3A8A", dot: "#3B82F6" },
+        in_progress: { bg: "#FEF9C3", color: "#713F12", dot: "#EAB308" },
+        started: { bg: "#F3F4F6", color: "#374151", dot: "#9CA3AF" },
     };
     const c = cfg[status] ?? cfg.pending;
     return (
         <span style={{ background: c.bg, color: c.color, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 5 }}>
             <span style={{ width: 5, height: 5, borderRadius: "50%", background: c.dot, display: "inline-block" }} />
-            {status.charAt(0).toUpperCase() + status.slice(1)}
+            {status.replace("_", " ").charAt(0).toUpperCase() + status.replace("_", " ").slice(1)}
         </span>
     );
 }
@@ -117,11 +118,7 @@ function Field({ label, value }: { label: string; value?: string | null }) {
     );
 }
 
-function ActionModal({
-    type,
-    onConfirm,
-    onClose,
-}: {
+function ActionModal({ type, onConfirm, onClose }: {
     type: "approve" | "reject";
     onConfirm: (reason: string) => void;
     onClose: () => void;
@@ -139,77 +136,38 @@ function ActionModal({
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div
-                onClick={(e) => e.stopPropagation()}
-                style={{
-                    background: "#fff",
-                    borderRadius: 16,
-                    padding: 32,
-                    width: 480,
-                    boxShadow: "0 24px 64px rgba(0,0,0,0.2)",
-                }}
-            >
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, padding: 32, width: 480, boxShadow: "0 24px 64px rgba(0,0,0,0.2)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         <div style={{ padding: 10, borderRadius: 10, background: isApprove ? "#DCFCE7" : "#FEE2E2" }}>
-                            {isApprove
-                                ? <CheckCircle size={20} color="#15803D" />
-                                : <XCircle size={20} color="#DC2626" />}
+                            {isApprove ? <CheckCircle size={20} color="#15803D" /> : <XCircle size={20} color="#DC2626" />}
                         </div>
                         <div>
-                            <h3 style={{ fontFamily: "Poppins, sans-serif", fontSize: 16, fontWeight: 800, color: "#0A1628" }}>
+                            <h3 style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 800, color: "#0A1628" }}>
                                 {isApprove ? "Approve Application" : "Reject Application"}
                             </h3>
-                            <p style={{ fontSize: 11, color: "#94A3B8", marginTop: 2 }}>
-                                This action will be permanently logged
-                            </p>
+                            <p style={{ fontSize: 11, color: "#94A3B8", marginTop: 2 }}>This action will be permanently logged</p>
                         </div>
                     </div>
                     <button onClick={onClose} style={{ background: "#F1F5F9", border: "none", borderRadius: 8, width: 30, height: 30, cursor: "pointer", color: "#334155", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <X size={14} />
                     </button>
                 </div>
-
                 <div style={{ marginBottom: 20 }}>
                     <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#334155", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 8 }}>
                         Reason *
                     </label>
                     <textarea
-                        className="boc-input"
-                        rows={4}
-                        style={{ resize: "none" }}
-                        placeholder={
-                            isApprove
-                                ? "e.g. All documents verified and face match confirmed"
-                                : "e.g. NIC number mismatch with submitted documents"
-                        }
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                        autoFocus
+                        className="boc-input" rows={4} style={{ resize: "none" }}
+                        placeholder={isApprove ? "e.g. All documents verified and face match confirmed" : "e.g. NIC number mismatch with submitted documents"}
+                        value={reason} onChange={e => setReason(e.target.value)} autoFocus
                     />
                 </div>
-
                 <div style={{ display: "flex", gap: 10 }}>
-                    <button
-                        onClick={onClose}
-                        style={{ flex: 1, padding: "9px", borderRadius: 8, border: "1px solid #E2E8F0", background: "transparent", color: "#334155", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "Poppins, sans-serif" }}
-                    >
+                    <button onClick={onClose} style={{ flex: 1, padding: "9px", borderRadius: 8, border: "1px solid #E2E8F0", background: "transparent", color: "#334155", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
                         Cancel
                     </button>
-                    <button
-                        onClick={handle}
-                        disabled={!reason.trim() || busy}
-                        style={{
-                            flex: 1, padding: "9px", borderRadius: 8, border: "none",
-                            background: isApprove
-                                ? "linear-gradient(135deg, #22C55E, #15803D)"
-                                : "linear-gradient(135deg, #EF4444, #DC2626)",
-                            color: "#fff", fontWeight: 700, fontSize: 13,
-                            cursor: !reason.trim() || busy ? "not-allowed" : "pointer",
-                            opacity: !reason.trim() || busy ? 0.5 : 1,
-                            fontFamily: "Poppins, sans-serif",
-                        }}
-                    >
+                    <button onClick={handle} disabled={!reason.trim() || busy} style={{ flex: 1, padding: "9px", borderRadius: 8, border: "none", background: isApprove ? "linear-gradient(135deg,#22C55E,#15803D)" : "linear-gradient(135deg,#EF4444,#DC2626)", color: "#fff", fontWeight: 700, fontSize: 13, cursor: !reason.trim() || busy ? "not-allowed" : "pointer", opacity: !reason.trim() || busy ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}>
                         {busy ? "Processing…" : isApprove ? "Confirm Approve" : "Confirm Reject"}
                     </button>
                 </div>
@@ -218,106 +176,87 @@ function ActionModal({
     );
 }
 
-// ── Tab content components ──────────────────────────────
+// ── Tab components ────────────────────────────────────
 
-function OverviewTab({ data }: { data: Detail }) {
-    const c = data.customer ?? {};
+function OverviewTab({ data }: { data: BackendDetail }) {
+    const c = data.customer;
+    const riskScore = c.risk_score != null ? parseFloat(String(c.risk_score)) : null;
     return (
         <div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-                <Field label="Full Name" value={c.name} />
-                <Field label="NIC Number" value={c.nic} />
-                <Field label="Date of Birth" value={formatDate(c.dob)} />
+                <Field label="Full Name" value={c.full_name} />
+                <Field label="NIC Number" value={c.nic_number} />
+                <Field label="Date of Birth" value={formatDate(c.date_of_birth)} />
                 <Field label="Age" value={c.age ? `${c.age} years` : null} />
                 <Field label="Gender" value={c.gender} />
-                <Field label="Phone" value={c.phone} />
+                <Field label="Phone" value={c.phone_number} />
                 <Field label="Email" value={c.email} />
-                <Field label="Account Purpose" value={c.purpose} />
-                <Field label="Language" value={c.language} />
-                <Field label="Submitted At" value={formatDateTime(data.created_at)} />
-                <Field label="Status" value={data.status?.toUpperCase()} />
-                <Field label="AI Confidence" value={data.ai_confidence_score != null ? `${(data.ai_confidence_score * 100).toFixed(1)}%` : null} />
+                <Field label="Account Purpose" value={c.account_purpose} />
+                <Field label="Submitted At" value={formatDateTime(c.created_at)} />
+                <Field label="Status" value={c.verification_status?.toUpperCase()} />
+                {riskScore != null && (
+                    <Field label="Risk Score" value={`${riskScore.toFixed(1)} / 100`} />
+                )}
+                {data.sessions[0] && (
+                    <Field label="Language" value={data.sessions[0].language?.toUpperCase()} />
+                )}
             </div>
             {c.address && (
-                <div style={{ background: "#F8FAFC", borderRadius: 8, padding: "10px 14px" }}>
+                <div style={{ background: "#F8FAFC", borderRadius: 8, padding: "10px 14px", marginBottom: 16 }}>
                     <div style={{ fontSize: 10, color: "#94A3B8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Address</div>
                     <div style={{ fontWeight: 600, color: "#0A1628", fontSize: 13 }}>{c.address}</div>
                 </div>
             )}
-            {/* AI Score bar */}
-            {data.ai_confidence_score != null && (
-                <div style={{ marginTop: 16, background: "#F8FAFC", borderRadius: 8, padding: "14px 16px" }}>
+            {riskScore != null && (
+                <div style={{ background: "#F8FAFC", borderRadius: 8, padding: "14px 16px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#334155" }}>AI Confidence Score</span>
-                        <span style={{ fontSize: 14, fontWeight: 900, color: data.ai_confidence_score >= 0.8 ? "#15803D" : data.ai_confidence_score >= 0.6 ? "#D97706" : "#DC2626", fontFamily: "Poppins, sans-serif" }}>
-                            {(data.ai_confidence_score * 100).toFixed(1)}%
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#334155" }}>Risk Score</span>
+                        <span style={{ fontSize: 14, fontWeight: 900, color: riskScore >= 70 ? "#DC2626" : riskScore >= 40 ? "#D97706" : "#15803D", fontFamily: "Georgia, serif" }}>
+                            {riskScore.toFixed(1)} / 100
                         </span>
                     </div>
                     <div style={{ background: "#E2E8F0", borderRadius: 4, height: 8 }}>
-                        <div style={{
-                            width: `${data.ai_confidence_score * 100}%`,
-                            height: "100%",
-                            borderRadius: 4,
-                            background: data.ai_confidence_score >= 0.8
-                                ? "linear-gradient(90deg, #22C55E, #15803D)"
-                                : data.ai_confidence_score >= 0.6
-                                    ? "linear-gradient(90deg, #F59E0B, #D97706)"
-                                    : "linear-gradient(90deg, #EF4444, #DC2626)",
-                            transition: "width 0.8s ease",
-                        }} />
+                        <div style={{ width: `${riskScore}%`, height: "100%", borderRadius: 4, background: riskScore >= 70 ? "linear-gradient(90deg,#EF4444,#DC2626)" : riskScore >= 40 ? "linear-gradient(90deg,#F59E0B,#D97706)" : "linear-gradient(90deg,#22C55E,#15803D)", transition: "width 0.8s ease" }} />
                     </div>
-                </div>
-            )}
-            {data.rejection_reason && (
-                <div style={{ marginTop: 16, padding: 14, background: "#FEE2E2", border: "1px solid #FECACA", borderRadius: 8 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "#7F1D1D", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Rejection Reason</div>
-                    <div style={{ color: "#7F1D1D", fontSize: 13 }}>{data.rejection_reason}</div>
-                </div>
-            )}
-            {data.approval_reason && (
-                <div style={{ marginTop: 16, padding: 14, background: "#DCFCE7", border: "1px solid #BBF7D0", borderRadius: 8 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "#166534", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Approval Reason</div>
-                    <div style={{ color: "#166534", fontSize: 13 }}>{data.approval_reason}</div>
                 </div>
             )}
         </div>
     );
 }
 
-function OtpTab({ data }: { data: Detail }) {
-    const otp = data.otp;
-    const phone = otp?.phone ?? data.customer?.phone;
+function OtpTab({ data }: { data: BackendDetail }) {
+    const c = data.customer;
     return (
         <div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 20 }}>
-                <div style={{ background: otp?.verified ? "#DCFCE7" : "#FEE2E2", borderRadius: 10, padding: 20, textAlign: "center" }}>
-                    <div style={{ fontSize: 36 }}>{otp?.verified ? "✓" : "✗"}</div>
-                    <div style={{ fontWeight: 700, color: otp?.verified ? "#166534" : "#7F1D1D", fontSize: 14, marginTop: 6 }}>
-                        {otp?.verified ? "OTP Verified" : "Not Verified"}
+                <div style={{ background: c.otp_verified ? "#DCFCE7" : "#FEE2E2", borderRadius: 10, padding: 20, textAlign: "center" }}>
+                    <div style={{ fontSize: 36 }}>{c.otp_verified ? "✓" : "✗"}</div>
+                    <div style={{ fontWeight: 700, color: c.otp_verified ? "#166534" : "#7F1D1D", fontSize: 14, marginTop: 6 }}>
+                        {c.otp_verified ? "OTP Verified" : "Not Verified"}
                     </div>
                 </div>
                 <div style={{ background: "#F8FAFC", borderRadius: 10, padding: 20 }}>
                     <div style={{ fontSize: 10, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Phone Number</div>
-                    <div style={{ fontWeight: 700, color: "#0A1628", fontSize: 14 }}>{phone ?? "—"}</div>
+                    <div style={{ fontWeight: 700, color: "#0A1628", fontSize: 14 }}>{c.phone_number ?? "—"}</div>
                 </div>
                 <div style={{ background: "#F8FAFC", borderRadius: 10, padding: 20 }}>
                     <div style={{ fontSize: 10, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Attempts</div>
-                    <div style={{ fontWeight: 900, color: "#0A1628", fontSize: 28, fontFamily: "Poppins, sans-serif" }}>{otp?.attempts ?? 1}</div>
+                    <div style={{ fontWeight: 900, color: "#0A1628", fontSize: 28, fontFamily: "Georgia, serif" }}>{c.otp_attempts ?? 0}</div>
                 </div>
             </div>
             <div style={{ background: "#F8FAFC", borderRadius: 8, padding: 16 }}>
                 <div style={{ fontSize: 12, color: "#94A3B8" }}>
-                    OTP code: <span style={{ fontFamily: "Poppins, sans-serif", fontWeight: 700, letterSpacing: 4, color: "#0A1628" }}>••••••</span>
+                    OTP code: <span style={{ fontFamily: "monospace", fontWeight: 700, letterSpacing: 4, color: "#0A1628" }}>••••••</span>
                 </div>
                 <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 8 }}>
-                    {otp?.sent_at ? `Sent at: ${formatDateTime(otp.sent_at)} · Expires 10 minutes from generation` : "OTP timing data not available"}
+                    OTP is sent to customer phone number during KYC session
                 </div>
             </div>
         </div>
     );
 }
 
-function DocumentsTab({ data }: { data: Detail }) {
+function DocumentsTab({ data }: { data: BackendDetail }) {
     if (!data.documents?.length) {
         return (
             <div style={{ textAlign: "center", padding: 48, color: "#94A3B8" }}>
@@ -329,173 +268,27 @@ function DocumentsTab({ data }: { data: Detail }) {
     }
     return (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-            {data.documents.map((doc, i) => (
-                <div key={i} style={{ border: "1px solid #E2E8F0", borderRadius: 10, overflow: "hidden" }}>
-                    <div style={{ background: doc.verified ? "#DBEAFE" : "#F1F5F9", height: 130, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8 }}>
-                        <span style={{ fontSize: 48 }}>🪪</span>
-                        {doc.quality_score != null && (
-                            <span style={{ fontSize: 11, fontWeight: 700, color: doc.quality_score >= 80 ? "#15803D" : "#D97706" }}>
-                                Quality: {doc.quality_score.toFixed(1)}%
-                            </span>
-                        )}
-                    </div>
-                    <div style={{ padding: 14 }}>
-                        <div style={{ fontWeight: 700, fontSize: 13, color: "#0A1628", textTransform: "capitalize", marginBottom: 8 }}>
-                            {doc.doc_type?.replace(/_/g, " ")}
-                        </div>
-                        <span style={{ background: doc.verified ? "#DCFCE7" : "#F3F4F6", color: doc.verified ? "#14532D" : "#6B7280", padding: "2px 8px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
-                            {doc.verified ? "✓ Verified" : "Unverified"}
-                        </span>
-                        {doc.file_url && (
-                            <a href={doc.file_url} target="_blank" rel="noopener noreferrer" style={{ display: "block", fontSize: 11, color: "#2563EB", marginTop: 8 }}>
-                                View document →
-                            </a>
-                        )}
-                        {doc.ocr_data && Object.keys(doc.ocr_data).length > 0 && (
-                            <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #E2E8F0" }}>
-                                {Object.entries(doc.ocr_data).map(([k, v]) => (
-                                    <div key={k} style={{ marginBottom: 4 }}>
-                                        <span style={{ fontSize: 10, color: "#94A3B8", textTransform: "uppercase", letterSpacing: 0.5 }}>{k.replace(/_/g, " ")}: </span>
-                                        <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{v}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-}
-
-function BiometricsTab({ data }: { data: Detail }) {
-    const b = data.biometrics;
-    if (!b) {
-        return (
-            <div style={{ textAlign: "center", padding: 48, color: "#94A3B8" }}>
-                <div style={{ fontSize: 48, marginBottom: 12 }}>📸</div>
-                <div style={{ fontWeight: 600, color: "#334155" }}>No biometric data found</div>
-                <div style={{ fontSize: 12, marginTop: 4 }}>Biometric data will appear once AI processes the session</div>
-            </div>
-        );
-    }
-    return (
-        <div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
-                {[
-                    { label: "Selfie / Liveness", emoji: "🤳", bg: "#DBEAFE" },
-                    { label: "NIC Photo", emoji: "🪪", bg: "#F0FDF4" },
-                ].map((item) => (
-                    <div key={item.label} style={{ border: "1px solid #E2E8F0", borderRadius: 10, overflow: "hidden" }}>
-                        <div style={{ background: item.bg, height: 160, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 60 }}>
-                            {item.emoji}
-                        </div>
-                        <div style={{ padding: 12 }}>
-                            <div style={{ fontWeight: 700, fontSize: 13, color: "#0A1628" }}>{item.label}</div>
-                            <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>Captured during session</div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-                {[
-                    {
-                        label: "Face Match Score",
-                        value: b.face_match_score != null ? `${(b.face_match_score * 100).toFixed(1)}%` : "—",
-                        ok: (b.face_match_score ?? 0) >= 0.8,
-                    },
-                    {
-                        label: "Liveness Result",
-                        value: b.liveness_passed != null ? (b.liveness_passed ? "Pass" : "Fail") : "—",
-                        ok: b.liveness_passed ?? false,
-                    },
-                    {
-                        label: "Spoof Detection",
-                        value: b.spoof_clear != null ? (b.spoof_clear ? "Clear" : "Flagged") : "Clear",
-                        ok: b.spoof_clear ?? true,
-                    },
-                ].map((item) => (
-                    <div key={item.label} style={{ background: item.ok ? "#DCFCE7" : "#FEE2E2", borderRadius: 8, padding: 16, textAlign: "center" }}>
-                        <div style={{ fontSize: 22, fontWeight: 900, color: item.ok ? "#166534" : "#7F1D1D", fontFamily: "Poppins, sans-serif" }}>
-                            {item.value}
-                        </div>
-                        <div style={{ fontSize: 11, color: item.ok ? "#166534" : "#7F1D1D", marginTop: 4 }}>
-                            {item.label}
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-}
-
-function SignatureTab({ data }: { data: Detail }) {
-    const s = data.signature;
-    if (!s) {
-        return (
-            <div style={{ textAlign: "center", padding: 48, color: "#94A3B8" }}>
-                <div style={{ fontSize: 48, marginBottom: 12 }}>✍️</div>
-                <div style={{ fontWeight: 600, color: "#334155" }}>No signature found</div>
-                <div style={{ fontSize: 12, marginTop: 4 }}>Signature will appear once AI processes the session</div>
-            </div>
-        );
-    }
-    return (
-        <div>
-            <div style={{ border: "2px dashed #E2E8F0", borderRadius: 12, padding: 48, textAlign: "center", marginBottom: 16, background: "#FAFAFA" }}>
-                <div style={{ fontSize: 64, marginBottom: 12 }}>✍️</div>
-                <div style={{ fontStyle: "italic", fontSize: 36, fontFamily: "Poppins, sans-serif", color: "#0A1628" }}>
-                    {data.customer?.name?.split(" ")[0]}
-                </div>
-            </div>
-            <div style={{ display: "flex", gap: 20, fontSize: 13, color: "#94A3B8" }}>
-                <span>Type: <b style={{ color: "#334155" }}>{s.type ?? "Canvas (drawn)"}</b></span>
-                <span>Captured: <b style={{ color: "#334155" }}>{formatDateTime(s.captured_at)}</b></span>
-            </div>
-        </div>
-    );
-}
-
-function LogsTab({ data }: { data: Detail }) {
-    if (!data.session_logs?.length) {
-        return (
-            <div style={{ textAlign: "center", padding: 48, color: "#94A3B8" }}>
-                <div style={{ fontSize: 48, marginBottom: 12 }}>📜</div>
-                <div style={{ fontWeight: 600, color: "#334155" }}>No session logs found</div>
-                <div style={{ fontSize: 12, marginTop: 4 }}>Logs will appear once AI processes the session</div>
-            </div>
-        );
-    }
-    return (
-        <div style={{ position: "relative", paddingLeft: 24 }}>
-            {data.session_logs.map((log, i) => {
-                const dotColor =
-                    log.result === "success" ? "#22C55E" :
-                        log.result === "warning" ? "#F59E0B" : "#EF4444";
+            {data.documents.map((doc, i) => {
+                const qualityNum = doc.quality_score ? parseFloat(doc.quality_score) : null;
                 return (
-                    <div key={i} style={{ display: "flex", gap: 16, marginBottom: 14, position: "relative" }}>
-                        <div style={{ position: "absolute", left: -22, top: 6, width: 10, height: 10, borderRadius: "50%", background: dotColor }} />
-                        {i < data.session_logs!.length - 1 && (
-                            <div style={{ position: "absolute", left: -18, top: 16, width: 2, height: "calc(100% + 4px)", background: "#E2E8F0" }} />
-                        )}
-                        <div style={{ flex: 1, background: "#F8FAFC", borderRadius: 8, padding: "10px 14px" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                    <span style={{ fontWeight: 700, fontSize: 13, color: "#0A1628" }}>{log.event}</span>
-                                    {log.step && (
-                                        <span style={{ background: "#E2E8F0", color: "#334155", padding: "1px 7px", borderRadius: 4, fontSize: 10 }}>
-                                            {log.step}
-                                        </span>
-                                    )}
-                                </div>
-                                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                    {log.score != null && (
-                                        <span style={{ fontSize: 11, fontWeight: 700, color: "#0D9488" }}>Score: {log.score}</span>
-                                    )}
-                                    <span style={{ fontFamily: "Poppins, sans-serif", fontSize: 11, color: "#94A3B8" }}>
-                                        {formatDateTime(log.timestamp)}
-                                    </span>
-                                </div>
+                    <div key={i} style={{ border: "1px solid #E2E8F0", borderRadius: 10, overflow: "hidden" }}>
+                        <div style={{ background: "#DBEAFE", height: 130, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8 }}>
+                            <span style={{ fontSize: 48 }}>🪪</span>
+                            {qualityNum != null && (
+                                <span style={{ fontSize: 11, fontWeight: 700, color: qualityNum >= 80 ? "#15803D" : "#D97706" }}>
+                                    Quality: {qualityNum.toFixed(1)}%
+                                </span>
+                            )}
+                        </div>
+                        <div style={{ padding: 14 }}>
+                            <div style={{ fontWeight: 700, fontSize: 13, color: "#0A1628", textTransform: "capitalize", marginBottom: 8 }}>
+                                {doc.type?.replace(/_/g, " ")}
+                            </div>
+                            <div style={{ fontSize: 11, color: "#94A3B8", marginBottom: 8 }}>
+                                Size: {doc.file_size ? `${(doc.file_size / 1024).toFixed(1)} KB` : "—"}
+                            </div>
+                            <div style={{ fontSize: 11, color: "#94A3B8" }}>
+                                Uploaded: {formatDateTime(doc.uploaded_at)}
                             </div>
                         </div>
                     </div>
@@ -505,9 +298,135 @@ function LogsTab({ data }: { data: Detail }) {
     );
 }
 
-function AccountTab({ data }: { data: Detail }) {
-    const a = data.account;
-    if (!a) {
+function BiometricsTab({ data }: { data: BackendDetail }) {
+    const c = data.customer;
+    const hasSelfie = !!c.selfie_image;
+
+    return (
+        <div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+                <div style={{ border: "1px solid #E2E8F0", borderRadius: 10, overflow: "hidden" }}>
+                    <div style={{ background: "#DBEAFE", height: 160, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8 }}>
+                        {hasSelfie ? (
+                            <img src={`data:image/jpeg;base64,${c.selfie_image}`} alt="Selfie" style={{ maxHeight: 150, maxWidth: "100%", objectFit: "cover" }} />
+                        ) : (
+                            <span style={{ fontSize: 60 }}>🤳</span>
+                        )}
+                    </div>
+                    <div style={{ padding: 12 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: "#0A1628" }}>Selfie / Liveness</div>
+                        <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>
+                            {hasSelfie ? "Captured during session" : "Not captured"}
+                        </div>
+                    </div>
+                </div>
+                <div style={{ border: "1px solid #E2E8F0", borderRadius: 10, overflow: "hidden" }}>
+                    <div style={{ background: "#F0FDF4", height: 160, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 60 }}>
+                        🪪
+                    </div>
+                    <div style={{ padding: 12 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: "#0A1628" }}>NIC Photo</div>
+                        <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>Extracted from document</div>
+                    </div>
+                </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                {[
+                    { label: "OTP Verified", value: c.otp_verified ? "Pass" : "Fail", ok: c.otp_verified },
+                    { label: "Name Verified", value: data.sessions[0]?.name_verified ? "Pass" : "Fail", ok: data.sessions[0]?.name_verified ?? false },
+                    { label: "Session Status", value: data.sessions[0]?.status ?? "—", ok: data.sessions[0]?.status === "completed" },
+                ].map(item => (
+                    <div key={item.label} style={{ background: item.ok ? "#DCFCE7" : "#FEE2E2", borderRadius: 8, padding: 16, textAlign: "center" }}>
+                        <div style={{ fontSize: 22, fontWeight: 900, color: item.ok ? "#166534" : "#7F1D1D", fontFamily: "Georgia, serif" }}>{item.value}</div>
+                        <div style={{ fontSize: 11, color: item.ok ? "#166534" : "#7F1D1D", marginTop: 4 }}>{item.label}</div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function SignatureTab({ data }: { data: BackendDetail }) {
+    const sig = data.signatures?.[0];
+    if (!sig) {
+        return (
+            <div style={{ textAlign: "center", padding: 48, color: "#94A3B8" }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>✍️</div>
+                <div style={{ fontWeight: 600, color: "#334155" }}>No signature found</div>
+                <div style={{ fontSize: 12, marginTop: 4 }}>Signature will appear once the AI processes the session</div>
+            </div>
+        );
+    }
+    return (
+        <div>
+            <div style={{ border: "2px dashed #E2E8F0", borderRadius: 12, padding: 32, textAlign: "center", marginBottom: 16, background: "#FAFAFA" }}>
+                {sig.type === "canvas" && sig.data ? (
+                    <img src={sig.data} alt="Signature" style={{ maxWidth: 400, maxHeight: 200 }} />
+                ) : (
+                    <div style={{ fontStyle: "italic", fontSize: 36, fontFamily: "cursive", color: "#0A1628" }}>
+                        {data.customer.full_name?.split(" ")[0]}
+                    </div>
+                )}
+            </div>
+            <div style={{ display: "flex", gap: 20, fontSize: 13, color: "#94A3B8" }}>
+                <span>Type: <b style={{ color: "#334155" }}>{sig.type ?? "Canvas"}</b></span>
+                <span>Captured: <b style={{ color: "#334155" }}>{formatDateTime(sig.created_at)}</b></span>
+            </div>
+        </div>
+    );
+}
+
+function LogsTab({ data }: { data: BackendDetail }) {
+    if (!data.logs?.length) {
+        return (
+            <div style={{ textAlign: "center", padding: 48, color: "#94A3B8" }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>📜</div>
+                <div style={{ fontWeight: 600, color: "#334155" }}>No session logs found</div>
+                <div style={{ fontSize: 12, marginTop: 4 }}>Logs will appear once the AI processes the session</div>
+            </div>
+        );
+    }
+    return (
+        <div style={{ position: "relative", paddingLeft: 24 }}>
+            {data.logs.map((log, i) => {
+                const dotColor = log.result === "success" ? "#22C55E" : log.result === "warning" ? "#F59E0B" : "#EF4444";
+                return (
+                    <div key={i} style={{ display: "flex", gap: 16, marginBottom: 14, position: "relative" }}>
+                        <div style={{ position: "absolute", left: -22, top: 6, width: 10, height: 10, borderRadius: "50%", background: dotColor }} />
+                        {i < data.logs.length - 1 && (
+                            <div style={{ position: "absolute", left: -18, top: 16, width: 2, height: "calc(100% + 4px)", background: "#E2E8F0" }} />
+                        )}
+                        <div style={{ flex: 1, background: "#F8FAFC", borderRadius: 8, padding: "10px 14px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    <span style={{ fontWeight: 700, fontSize: 13, color: "#0A1628" }}>{log.action}</span>
+                                    {log.step && (
+                                        <span style={{ background: "#E2E8F0", color: "#334155", padding: "1px 7px", borderRadius: 4, fontSize: 10 }}>{log.step}</span>
+                                    )}
+                                </div>
+                                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                    {log.confidence_score && (
+                                        <span style={{ fontSize: 11, fontWeight: 700, color: "#0D9488" }}>Score: {log.confidence_score}</span>
+                                    )}
+                                    <span style={{ fontFamily: "monospace", fontSize: 11, color: "#94A3B8" }}>{formatDateTime(log.timestamp)}</span>
+                                </div>
+                            </div>
+                            {log.details && (
+                                <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>{log.details}</div>
+                            )}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+function AccountTab({ data }: { data: BackendDetail }) {
+    const account = data.accounts?.[0];
+    const c = data.customer;
+
+    if (!account && c.verification_status !== "approved") {
         return (
             <div style={{ textAlign: "center", padding: 48, color: "#94A3B8" }}>
                 <div style={{ fontSize: 48, marginBottom: 12 }}>🏦</div>
@@ -516,25 +435,26 @@ function AccountTab({ data }: { data: Detail }) {
             </div>
         );
     }
+
     return (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <Field label="Account Number" value={a.account_number} />
-            <Field label="Account Type" value={a.account_type} />
-            <Field label="Branch" value={a.branch} />
-            <Field label="Currency" value={a.currency ?? "LKR"} />
-            <Field label="Created At" value={formatDateTime(a.created_at)} />
-            <Field label="Status" value="Active" />
+            <Field label="Account Number" value={account?.account_number ?? c.account_number} />
+            <Field label="Account Type" value={account?.account_type ?? c.account_purpose} />
+            <Field label="Branch" value={account?.branch ?? "Main Branch"} />
+            <Field label="Status" value={account?.status ?? "Active"} />
+            <Field label="Currency" value="LKR" />
+            <Field label="Created At" value={formatDateTime(account?.created_at ?? c.updated_at)} />
         </div>
     );
 }
 
-// ── Main page ──────────────────────────────────────────
+// ── Main Page ─────────────────────────────────────────
 
 export default function AppDetailPage() {
     const { sessionId } = useParams() as { sessionId: string };
     const router = useRouter();
     const { user } = useAuth();
-    const [data, setData] = useState<Detail | null>(null);
+    const [data, setData] = useState<BackendDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [tab, setTab] = useState("overview");
     const [modal, setModal] = useState<"approve" | "reject" | null>(null);
@@ -543,47 +463,7 @@ export default function AppDetailPage() {
     const fetchData = useCallback(async () => {
         try {
             const res = await applicationsApi.get(sessionId);
-            const d = res.data;
-            const c = d.customer || {};
-            
-            setData({
-                session_id: c.session_id,
-                status: c.verification_status,
-                created_at: c.created_at,
-                updated_at: c.updated_at,
-                risk_score: c.risk_score ? parseFloat(c.risk_score) : undefined,
-                customer: {
-                    name: c.full_name,
-                    nic: c.nic_number,
-                    dob: c.date_of_birth,
-                    age: c.age,
-                    gender: c.gender,
-                    phone: c.phone_number,
-                    email: c.email,
-                    address: c.address,
-                    purpose: c.account_purpose,
-                    language: d.sessions?.[0]?.language,
-                },
-                documents: d.documents?.map((doc: any) => ({
-                    doc_type: doc.type,
-                    file_url: doc.file_path,
-                    verified: true,
-                    quality_score: doc.quality_score ? parseFloat(doc.quality_score) : undefined,
-                })),
-                session_logs: d.logs?.map((log: any) => ({
-                    event: log.action,
-                    timestamp: log.timestamp,
-                    step: log.step,
-                    score: log.confidence_score ? parseFloat(log.confidence_score) : undefined,
-                    result: log.result,
-                })),
-                account: d.accounts?.[0],
-                signature: d.signatures?.[0],
-                otp: {
-                    verified: c.otp_verified,
-                    attempts: c.otp_attempts,
-                }
-            } as Detail);
+            setData(res.data);
         } catch (e) {
             console.error(e);
         } finally {
@@ -591,9 +471,7 @@ export default function AppDetailPage() {
         }
     }, [sessionId]);
 
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+    useEffect(() => { fetchData(); }, [fetchData]);
 
     useEffect(() => {
         if (toast) {
@@ -631,97 +509,67 @@ export default function AppDetailPage() {
         );
     }
 
-    const c = data.customer ?? {};
-    const isPending = data.status === "pending" || data.status === "reviewing";
+    const c = data.customer;
+    const isPending = c.verification_status === "pending";
+    const riskScore = c.risk_score != null ? parseFloat(String(c.risk_score)) : null;
 
     return (
-        <div style={{ width: "100%", paddingRight: 16 }}>
+        <div style={{ maxWidth: 1100 }}>
             {/* Toast */}
             {toast && (
-                <div style={{
-                    position: "fixed", bottom: 28, right: 28, zIndex: 2000,
-                    display: "flex", alignItems: "center", gap: 12,
-                    background: toast.type === "success" ? "#0A1628" : "#7F1D1D",
-                    color: "#fff", padding: "14px 20px", borderRadius: 12,
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.25)", fontSize: 13,
-                    fontWeight: 600, animation: "slideUp 0.3s ease",
-                    fontFamily: "Poppins, sans-serif",
-                }}>
-                    <div style={{ width: 4, position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: "12px 0 0 12px", background: toast.type === "success" ? "#F5A800" : "#FCD34D" }} />
+                <div style={{ position: "fixed", bottom: 28, right: 28, zIndex: 2000, display: "flex", alignItems: "center", gap: 12, background: toast.type === "success" ? "#0A1628" : "#7F1D1D", color: "#fff", padding: "14px 20px", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.25)", fontSize: 13, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>
+                    <div style={{ width: 4, position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: "12px 0 0 12px", background: "#F5A800" }} />
                     {toast.type === "success" ? "✓" : "⚠"} {toast.msg}
                 </div>
             )}
 
             {/* Breadcrumb */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, fontSize: 13 }}>
-                <button
-                    onClick={() => router.back()}
-                    style={{ background: "none", border: "none", color: "#2563EB", cursor: "pointer", fontWeight: 600, padding: 0, display: "flex", alignItems: "center", gap: 4, fontFamily: "Poppins, sans-serif" }}
-                >
+                <button onClick={() => router.back()} style={{ background: "none", border: "none", color: "#2563EB", cursor: "pointer", fontWeight: 600, padding: 0, display: "flex", alignItems: "center", gap: 4, fontFamily: "'DM Sans', sans-serif" }}>
                     <ArrowLeft size={14} /> Applications
                 </button>
                 <span style={{ color: "#CBD5E1" }}>/</span>
-                <span style={{ color: "#334155", fontWeight: 600 }}>
-                    {data.session_id?.slice(0, 20)}…
-                </span>
+                <span style={{ color: "#334155", fontWeight: 600 }}>{c.session_id?.slice(0, 20)}…</span>
             </div>
 
             {/* Profile header */}
             <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 14, padding: "20px 24px", marginBottom: 16 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-                    {/* Avatar */}
                     <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#0A1628", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, color: "#F5A800", flexShrink: 0 }}>
-                        {c.name?.charAt(0) ?? "?"}
+                        {c.full_name?.charAt(0) ?? "?"}
                     </div>
                     <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
-                            <span style={{ fontSize: 20, fontWeight: 900, color: "#0A1628", fontFamily: "Poppins, sans-serif" }}>
-                                {c.name ?? "—"}
-                            </span>
-                            <StatusBadge status={data.status} />
-                            {data.risk_score != null && (
-                                <span style={{
-                                    background: data.risk_score >= 70 ? "#FEE2E2" : data.risk_score >= 40 ? "#FEF3C7" : "#DCFCE7",
-                                    color: data.risk_score >= 70 ? "#7F1D1D" : data.risk_score >= 40 ? "#92400E" : "#14532D",
-                                    padding: "3px 9px", borderRadius: 20, fontSize: 11, fontWeight: 700,
-                                }}>
-                                    {data.risk_score >= 70 ? "⚠ High Risk" : data.risk_score >= 40 ? "Medium Risk" : "Low Risk"} · {data.risk_score}
+                            <span style={{ fontSize: 20, fontWeight: 900, color: "#0A1628", fontFamily: "Georgia, serif" }}>{c.full_name ?? "—"}</span>
+                            <StatusBadge status={c.verification_status} />
+                            {riskScore != null && (
+                                <span style={{ background: riskScore >= 70 ? "#FEE2E2" : riskScore >= 40 ? "#FEF3C7" : "#DCFCE7", color: riskScore >= 70 ? "#7F1D1D" : riskScore >= 40 ? "#92400E" : "#14532D", padding: "3px 9px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
+                                    {riskScore >= 70 ? "⚠ High Risk" : riskScore >= 40 ? "Medium Risk" : "Low Risk"} · {riskScore.toFixed(0)}
                                 </span>
                             )}
                         </div>
                         <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                            {[["NIC", c.nic], ["Language", c.language], ["Purpose", c.purpose]].map(([l, v]) => v && (
-                                <span key={l} style={{ fontSize: 12, color: "#94A3B8" }}>
-                                    {l}: <b style={{ color: "#334155" }}>{v}</b>
-                                </span>
+                            {[["NIC", c.nic_number], ["Phone", c.phone_number], ["Purpose", c.account_purpose]].map(([l, v]) => v && (
+                                <span key={l} style={{ fontSize: 12, color: "#94A3B8" }}>{l}: <b style={{ color: "#334155" }}>{v}</b></span>
                             ))}
-                            <span style={{ fontSize: 12, color: "#94A3B8" }}>
-                                Submitted: <b style={{ color: "#334155" }}>{formatDateTime(data.created_at)}</b>
-                            </span>
+                            <span style={{ fontSize: 12, color: "#94A3B8" }}>Submitted: <b style={{ color: "#334155" }}>{formatDateTime(c.created_at)}</b></span>
                         </div>
                     </div>
 
                     {/* Action buttons */}
                     {isPending && user && (
                         <div style={{ display: "flex", gap: 8 }}>
-                            <button
-                                onClick={() => setModal("reject")}
-                                style={{ background: "linear-gradient(135deg, #EF4444, #DC2626)", color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "Poppins, sans-serif" }}
-                            >
+                            <button onClick={() => setModal("reject")} style={{ background: "linear-gradient(135deg,#EF4444,#DC2626)", color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "'DM Sans', sans-serif" }}>
                                 <XCircle size={14} /> Reject
                             </button>
-                            <button
-                                onClick={() => setModal("approve")}
-                                style={{ background: "linear-gradient(135deg, #22C55E, #15803D)", color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "Poppins, sans-serif" }}
-                            >
+                            <button onClick={() => setModal("approve")} style={{ background: "linear-gradient(135deg,#22C55E,#15803D)", color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "'DM Sans', sans-serif" }}>
                                 <CheckCircle size={14} /> Approve
                             </button>
                         </div>
                     )}
-
                     {!isPending && (
-                        <div style={{ background: data.status === "approved" ? "#DCFCE7" : "#FEE2E2", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontWeight: 700, color: data.status === "approved" ? "#166534" : "#7F1D1D" }}>
-                            {data.status === "approved" ? "✓ Application Approved" : "✗ Application Rejected"}
+                        <div style={{ background: c.verification_status === "approved" ? "#DCFCE7" : "#FEE2E2", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontWeight: 700, color: c.verification_status === "approved" ? "#166534" : "#7F1D1D" }}>
+                            {c.verification_status === "approved" ? "✓ Application Approved" : "✗ Application Rejected"}
                         </div>
                     )}
                 </div>
@@ -729,15 +577,9 @@ export default function AppDetailPage() {
 
             {/* Tabs */}
             <div style={{ display: "flex", gap: 4, marginBottom: 16, background: "#fff", border: "1px solid #E2E8F0", borderRadius: 10, padding: 4, width: "fit-content", flexWrap: "wrap" }}>
-                {TABS.map((t) => (
-                    <button
-                        key={t.id}
-                        onClick={() => setTab(t.id)}
-                        className={`tab-btn${tab === t.id ? " active" : ""}`}
-                        style={{ display: "flex", alignItems: "center", gap: 6 }}
-                    >
-                        <t.icon size={13} />
-                        {t.label}
+                {TABS.map(t => (
+                    <button key={t.id} onClick={() => setTab(t.id)} className={`tab-btn${tab === t.id ? " active" : ""}`} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <t.icon size={13} />{t.label}
                     </button>
                 ))}
             </div>
@@ -753,12 +595,11 @@ export default function AppDetailPage() {
                 {tab === "account" && <AccountTab data={data} />}
             </div>
 
-            {/* Modal */}
             {modal && (
                 <ActionModal
                     type={modal}
                     onClose={() => setModal(null)}
-                    onConfirm={(reason) => handleAction(modal, reason)}
+                    onConfirm={reason => handleAction(modal, reason)}
                 />
             )}
         </div>
