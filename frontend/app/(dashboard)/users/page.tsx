@@ -49,6 +49,7 @@ function CreateUserModal({
     const [form, setForm] = useState({
         full_name: "",
         email: "",
+        short_id: "",
         bank_id: "",
         branch: "",
         role: "user",
@@ -63,7 +64,7 @@ function CreateUserModal({
     }
 
     async function handle() {
-        if (!form.full_name || !form.email || !form.bank_id || !form.branch || !form.password) {
+        if (!form.full_name || !form.email || !form.short_id || !form.bank_id || !form.branch || !form.password) {
             setError("All fields are required");
             return;
         }
@@ -151,6 +152,23 @@ function CreateUserModal({
                         />
                     </div>
 
+                    {/* Short ID */}
+                    <div>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#334155", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 6 }}>
+                            Short ID <span style={{ color: "#DC2626" }}>*</span>
+                        </label>
+                        <input
+                            className="boc-input"
+                            style={{ fontFamily: "Poppins, sans-serif" }}
+                            placeholder="e.g. kyc001"
+                            value={form.short_id}
+                            onChange={(e) => set("short_id", e.target.value)}
+                        />
+                        <p style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>
+                            Used by the user to log in
+                        </p>
+                    </div>
+
                     {/* Bank ID */}
                     <div>
                         <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#334155", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 6 }}>
@@ -234,6 +252,14 @@ function CreateUserModal({
                     <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>
                         UUID segment auto-generated on save
                     </div>
+                    {form.short_id && (
+                        <div style={{ marginTop: 8, fontSize: 12 }}>
+                            Login Short ID:{" "}
+                            <span style={{ fontFamily: "Poppins, sans-serif", fontWeight: 700, color: "#0A1628" }}>
+                                {form.short_id}
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 {error && (
