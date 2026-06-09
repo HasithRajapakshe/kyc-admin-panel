@@ -14,7 +14,6 @@ import {
   X,
   ChevronRight,
 } from "lucide-react";
-
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/applications", label: "Applications", icon: FileText },
@@ -456,15 +455,15 @@ export default function DashboardLayout({
                 >
                   Bank of Ceylon — KYC Admin
                 </div>
-                
+
                 <div style={{ width: 1, height: 16, background: "#E2E8F0" }} />
-                
+
                 <div style={{ fontSize: 14, color: "#64748B", fontWeight: 500 }}>
                   CBSL & FIU-SL Compliant
                 </div>
-                
+
                 <div style={{ flex: 1 }} />
-                
+
                 <div style={{ fontSize: 13, color: "#94A3B8", fontWeight: 500 }}>
                   Updated: {currentTime}
                 </div>

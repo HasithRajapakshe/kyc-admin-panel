@@ -8,7 +8,7 @@ import io
 from app.models.database import (
     get_db, Customer, VerificationSession, VerificationLog,
     Document, Signature, Account,
-    VerificationStatusEnum, LogResultEnum
+    VerificationStatusEnum, SessionStatusEnum, LogResultEnum
 )
 from app.models.admin_user import AdminUser
 from app.core.dependencies import get_current_user
@@ -60,27 +60,34 @@ def list_applications(
     total = query.count()
     items = query.offset((page - 1) * limit).limit(limit).all()
 
+    result = []
+    for c in items:
+        # Get latest session status
+        latest_session = db.query(VerificationSession).filter(
+            VerificationSession.customer_id == c.id
+        ).order_by(VerificationSession.id.desc()).first()
+
+        result.append({
+            "session_id": c.session_id,
+            "full_name": c.full_name,
+            "nic_number": c.nic_number,
+            "phone_number": c.phone_number,
+            "email": c.email,
+            "created_at": c.created_at,
+            "updated_at": c.updated_at,
+            "verification_status": c.verification_status.value,
+            "risk_score": str(c.risk_score) if c.risk_score else None,
+            "otp_verified": c.otp_verified,
+            "account_purpose": c.account_purpose,
+            "session_status": latest_session.status.value if latest_session else None,
+        })
+
     return {
         "total": total,
         "page": page,
         "limit": limit,
         "total_pages": (total + limit - 1) // limit,
-        "items": [
-            {
-                "session_id": c.session_id,
-                "full_name": c.full_name,
-                "nic_number": c.nic_number,
-                "phone_number": c.phone_number,
-                "email": c.email,
-                "created_at": c.created_at,
-                "updated_at": c.updated_at,
-                "verification_status": c.verification_status.value,
-                "risk_score": str(c.risk_score) if c.risk_score else None,
-                "otp_verified": c.otp_verified,
-                "account_purpose": c.account_purpose,
-            }
-            for c in items
-        ]
+        "items": result
     }
 
 

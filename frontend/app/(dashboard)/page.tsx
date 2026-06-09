@@ -430,7 +430,7 @@ export default function DashboardPage() {
                   View All <ChevronRight size={14} />
                 </Link>
               </div>
-              
+
               {recentApps.length === 0 ? (
                 <div style={{ padding: 30, textAlign: "center", color: "#94A3B8", fontSize: 13 }}>
                   No recent applications found.
