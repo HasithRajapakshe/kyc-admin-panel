@@ -99,3 +99,4 @@ def get_kpis(
         "time_series": time_series,
         "hourly": hourly,
     }
+

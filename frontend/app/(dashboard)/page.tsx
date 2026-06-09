@@ -2,29 +2,31 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { applicationsApi } from "@/lib/api";
+import { dashboardApi, applicationsApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
-  Search,
-  Download,
-  ChevronLeft,
+  FileText,
+  Clock,
+  CheckCircle,
+  XCircle,
+  TrendingUp,
+  AlertTriangle,
+  Smartphone,
+  RefreshCw,
   ChevronRight,
 } from "lucide-react";
-import { formatDate, downloadBlob } from "@/lib/utils";
+import { formatDateTime, maskNic } from "@/lib/utils";
 
-interface App {
-  session_id: string;
-  full_name?: string;
-  nic_number?: string;
-  phone_number?: string;
-  email?: string;
-  verification_status: string;
-  created_at: string;
-  otp_verified?: boolean;
-  risk_score?: number | string;
+interface KPIs {
+  total_applications: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  today_submitted: number;
+  approval_rate: number;
+  high_risk: number;
+  otp_verified: number;
 }
-
-const STATUSES = ["all", "pending", "approved", "rejected"];
 
 function StatusBadge({ status }: { status?: string }) {
   if (!status) return null;
@@ -43,202 +45,463 @@ function StatusBadge({ status }: { status?: string }) {
   );
 }
 
-function RiskBadge({ score }: { score?: number | string | null }) {
-  if (score == null) return <span style={{ color: "#94A3B8" }}>—</span>;
-  const num = typeof score === "string" ? parseFloat(score) : score;
-  if (isNaN(num)) return <span style={{ color: "#94A3B8" }}>—</span>;
-  const high = num >= 70;
-  const med = num >= 40;
-  const bg = high ? "#FEE2E2" : med ? "#FEF3C7" : "#DCFCE7";
-  const color = high ? "#7F1D1D" : med ? "#92400E" : "#14532D";
-  const bar = high ? "#EF4444" : med ? "#F59E0B" : "#22C55E";
-  const label = high ? "High" : med ? "Medium" : "Low";
+function KpiCard({
+  label,
+  value,
+  icon: Icon,
+  gradient,
+  color,
+  sub,
+}: {
+  label: string;
+  value: number | string;
+  icon: React.ElementType;
+  gradient: string;
+  color: string;
+  sub: string;
+}) {
   return (
-    <span style={{ background: bg, color, padding: "3px 9px", borderRadius: 20, fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 5 }}>
-      <span style={{ width: 20, height: 4, borderRadius: 2, background: `linear-gradient(90deg, ${bar} ${num}%, #E5E7EB ${num}%)`, display: "inline-block" }} />
-      {label} {num.toFixed(0)}
-    </span>
+    <div
+      className="kpi-card"
+      style={{
+        background: "#fff",
+        border: "1px solid #E2E8F0",
+        borderRadius: 14,
+        padding: "18px 20px",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          right: 0,
+          width: 80,
+          height: 80,
+          borderRadius: "0 14px 0 80px",
+          background: gradient,
+          opacity: 0.5,
+        }}
+      />
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          position: "relative",
+        }}
+      >
+        <span
+          style={{
+            fontSize: 12,
+            color: "#94A3B8",
+            fontWeight: 700,
+            letterSpacing: 0.8,
+            textTransform: "uppercase",
+          }}
+        >
+          {label}
+        </span>
+        <Icon size={18} color={color} />
+      </div>
+      <div
+        style={{
+          fontSize: 34,
+          fontWeight: 900,
+          color: "#0A1628",
+          lineHeight: 1,
+          marginTop: 10,
+          fontFamily: "Poppins, sans-serif",
+          position: "relative",
+        }}
+      >
+        {value}
+      </div>
+      <div
+        style={{
+          fontSize: 13,
+          color: "#94A3B8",
+          marginTop: 8,
+          position: "relative",
+        }}
+      >
+        {sub}
+      </div>
+    </div>
   );
 }
 
-export default function ApplicationsPage() {
-  const { isAdmin } = useAuth();
-  const [items, setItems] = useState<App[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("all");
-  const [loading, setLoading] = useState(true);
-  const PAGE_SIZE = 20;
+function EmptyState() {
+  return (
+    <div
+      style={{
+        background: "#fff",
+        border: "1px solid #E2E8F0",
+        borderRadius: 14,
+        padding: 40,
+        textAlign: "center",
+        gridColumn: "1 / -1",
+      }}
+    >
+      <div style={{ fontSize: 48, marginBottom: 12 }}>📊</div>
+      <div
+        style={{
+          fontSize: 16,
+          fontWeight: 700,
+          color: "#0A1628",
+          fontFamily: "Poppins, sans-serif",
+        }}
+      >
+        No data yet
+      </div>
+      <div style={{ fontSize: 13, color: "#94A3B8", marginTop: 6 }}>
+        KPI data will appear here once the AI model starts processing applications.
+      </div>
+    </div>
+  );
+}
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+export default function DashboardPage() {
+  const { user } = useAuth();
+  const [kpis, setKpis] = useState<KPIs | null>(null);
+  const [recentApps, setRecentApps] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [error, setError] = useState(false);
+
+  const fetchDashboardData = useCallback(async () => {
     try {
-      const res = await applicationsApi.list({
-        page,
-        limit: PAGE_SIZE,
-        search: search || undefined,
-        status: status === "all" ? undefined : status,
-      });
-      setItems(res.data.items ?? []);
-      setTotal(res.data.total ?? 0);
+      setError(false);
+      const [kpisRes, appsRes] = await Promise.all([
+        dashboardApi.kpis(),
+        applicationsApi.list({ limit: 5 })
+      ]);
+      setKpis(kpisRes.data);
+      setRecentApps(appsRes.data?.items ?? []);
+      setLastRefresh(new Date());
     } catch (e) {
+      setError(true);
       console.error(e);
-      setItems([]);
     } finally {
       setLoading(false);
     }
-  }, [page, search, status]);
+  }, []);
 
   useEffect(() => {
-    const t = setTimeout(fetchData, 300);
-    return () => clearTimeout(t);
-  }, [fetchData]);
+    fetchDashboardData();
+    // Auto refresh every 30 seconds
+    const interval = setInterval(fetchDashboardData, 30_000);
+    return () => clearInterval(interval);
+  }, [fetchDashboardData]);
 
-  useEffect(() => { setPage(1); }, [search, status]);
+  const row1 = kpis
+    ? [
+      {
+        label: "Total Applications",
+        value: kpis.total_applications?.toLocaleString() ?? 0,
+        icon: FileText,
+        gradient: "linear-gradient(135deg, #DBEAFE, #BFDBFE)",
+        color: "#2563EB",
+        sub: "All KYC sessions",
+      },
+      {
+        label: "Pending Review",
+        value: kpis.pending ?? 0,
+        icon: Clock,
+        gradient: "linear-gradient(135deg, #FEF3C7, #FDE68A)",
+        color: "#D97706",
+        sub: "Awaiting decision",
+      },
+      {
+        label: "Approved",
+        value: kpis.approved?.toLocaleString() ?? 0,
+        icon: CheckCircle,
+        gradient: "linear-gradient(135deg, #DCFCE7, #BBF7D0)",
+        color: "#15803D",
+        sub: "Successfully onboarded",
+      },
+      {
+        label: "Rejected",
+        value: kpis.rejected ?? 0,
+        icon: XCircle,
+        gradient: "linear-gradient(135deg, #FEE2E2, #FECACA)",
+        color: "#DC2626",
+        sub: "Applications declined",
+      },
+    ]
+    : [];
 
-  async function handleExport() {
-    try {
-      const res = await applicationsApi.exportCsv();
-      downloadBlob(res.data, `applications_${new Date().toISOString().slice(0, 10)}.csv`);
-    } catch (e) { console.error(e); }
-  }
-
-  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const row2 = kpis
+    ? [
+      {
+        label: "Submitted Today",
+        value: kpis.today_submitted ?? 0,
+        icon: TrendingUp,
+        gradient: "linear-gradient(135deg, #EDE9FE, #DDD6FE)",
+        color: "#7C3AED",
+        sub: "New today",
+      },
+      {
+        label: "High Risk",
+        value: kpis.high_risk ?? 0,
+        icon: AlertTriangle,
+        gradient: "linear-gradient(135deg, #FEE2E2, #FECACA)",
+        color: "#DC2626",
+        sub: "Risk score above 70",
+      },
+      {
+        label: "OTP Verified",
+        value: kpis.otp_verified?.toLocaleString() ?? 0,
+        icon: Smartphone,
+        gradient: "linear-gradient(135deg, #CCFBF1, #99F6E4)",
+        color: "#0D9488",
+        sub: "Phone confirmed",
+      },
+      {
+        label: "Approval Rate",
+        value: kpis.approval_rate
+          ? `${kpis.approval_rate.toFixed(1)}%`
+          : "0%",
+        icon: CheckCircle,
+        gradient: "linear-gradient(135deg, #DCFCE7, #BBF7D0)",
+        color: "#15803D",
+        sub: "Of all applications",
+      },
+    ]
+    : [];
 
   return (
-    <div style={{ maxWidth: 1200 }}>
+    <div style={{ width: "100%", paddingRight: 16 }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 22 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          marginBottom: 24,
+        }}
+      >
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 900, color: "#0A1628", fontFamily: "Georgia, serif", letterSpacing: -0.5 }}>
-            Customer Applications
+          <h1
+            style={{
+              fontSize: 34,
+              fontWeight: 900,
+              color: "#0A1628",
+              fontFamily: "Poppins, sans-serif",
+              letterSpacing: -0.5,
+            }}
+          >
+            Dashboard
           </h1>
-          <p style={{ fontSize: 13, color: "#94A3B8", marginTop: 3 }}>
-            Review and action KYC onboarding sessions · {total.toLocaleString()} records
+          <p style={{ fontSize: 15, color: "#94A3B8", marginTop: 4 }}>
+            Welcome back, {user?.name} · auto-refreshes every 30s
           </p>
         </div>
-        {isAdmin && (
-          <button onClick={handleExport} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, background: "transparent", border: "1px solid #E2E8F0", color: "#334155", fontSize: 12, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
-            <Download size={13} /> Export CSV
-          </button>
-        )}
+        <button
+          onClick={fetchDashboardData}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "8px 14px",
+            borderRadius: 8,
+            background: "transparent",
+            border: "1px solid #E2E8F0",
+            color: "#334155",
+            fontSize: 12,
+            cursor: "pointer",
+            fontFamily: "Poppins, sans-serif",
+          }}
+        >
+          <RefreshCw size={13} />
+          Refresh
+        </button>
       </div>
 
-      {/* Search + Filter */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap", alignItems: "center" }}>
-        <div style={{ position: "relative", flex: 1, minWidth: 240 }}>
-          <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#94A3B8" }} />
-          <input className="boc-input" style={{ paddingLeft: 34 }} placeholder="Search by name, NIC or session ID…" value={search} onChange={e => setSearch(e.target.value)} />
+      {/* Error state */}
+      {error && (
+        <div
+          style={{
+            background: "#FEF2F2",
+            border: "1px solid #FECACA",
+            borderRadius: 10,
+            padding: "12px 16px",
+            fontSize: 13,
+            color: "#DC2626",
+            marginBottom: 20,
+          }}
+        >
+          ⚠ Could not load dashboard data. Make sure the backend is running.
         </div>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {STATUSES.map(s => (
-            <button key={s} onClick={() => setStatus(s)} style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${status === s ? "#0A1628" : "#E2E8F0"}`, background: status === s ? "#0A1628" : "#fff", color: status === s ? "#fff" : "#334155", fontWeight: status === s ? 700 : 500, fontSize: 12, cursor: "pointer", textTransform: "capitalize", fontFamily: "'DM Sans', sans-serif" }}>
-              {s === "all" ? "All" : s}
-            </button>
+      )}
+
+      {/* Loading skeleton */}
+      {loading ? (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: 14,
+            marginBottom: 14,
+          }}
+        >
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                background: "#fff",
+                border: "1px solid #E2E8F0",
+                borderRadius: 14,
+                padding: "18px 20px",
+                height: 110,
+              }}
+            >
+              <div
+                style={{
+                  height: 10,
+                  background: "#F1F5F9",
+                  borderRadius: 4,
+                  width: "60%",
+                  marginBottom: 16,
+                  animation: "pulse 1.5s ease-in-out infinite",
+                }}
+              />
+              <div
+                style={{
+                  height: 28,
+                  background: "#F1F5F9",
+                  borderRadius: 4,
+                  width: "40%",
+                  animation: "pulse 1.5s ease-in-out infinite",
+                }}
+              />
+            </div>
           ))}
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Row 1 KPIs */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: 14,
+              marginBottom: 14,
+            }}
+          >
+            {row1.length > 0 ? (
+              row1.map((c) => <KpiCard key={c.label} {...c} />)
+            ) : (
+              <EmptyState />
+            )}
+          </div>
 
-      {/* Table */}
-      <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 14, overflow: "hidden" }}>
-        <div style={{ overflowX: "auto" }}>
-          <table className="boc-table">
-            <thead>
-              <tr>
-                <th>Application ID</th>
-                <th>Customer</th>
-                <th>NIC</th>
-                <th>Phone</th>
-                <th>Submitted</th>
-                <th>Status</th>
-                <th>Risk</th>
-                <th>OTP</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <tr key={i}>
-                    {Array.from({ length: 9 }).map((_, j) => (
-                      <td key={j}>
-                        <div style={{ height: 12, background: "#F1F5F9", borderRadius: 4, width: "70%", animation: "pulse 1.5s ease-in-out infinite" }} />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : items.length === 0 ? (
-                <tr>
-                  <td colSpan={9} style={{ textAlign: "center", padding: "60px 0", color: "#94A3B8" }}>
-                    <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
-                    <div style={{ fontWeight: 600, color: "#334155", fontSize: 14 }}>No applications found</div>
-                    <div style={{ fontSize: 12, marginTop: 4 }}>
-                      Applications will appear here once the AI model starts processing KYC sessions
-                    </div>
-                  </td>
-                </tr>
+          {/* Row 2 KPIs */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: 14,
+              marginBottom: 24,
+            }}
+          >
+            {row2.map((c) => (
+              <KpiCard key={c.label} {...c} />
+            ))}
+          </div>
+
+          {/* Bottom Grid: Recent Applications & Info Banner */}
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16 }}>
+            {/* Recent Applications Table */}
+            <div
+              style={{
+                background: "#fff",
+                border: "1px solid #E2E8F0",
+                borderRadius: 14,
+                padding: "20px 24px",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0A1628", fontFamily: "Poppins, sans-serif" }}>Recent Applications</h3>
+                <Link href="/applications" style={{ fontSize: 12, color: "#2563EB", textDecoration: "none", display: "flex", alignItems: "center", gap: 4, fontWeight: 600 }}>
+                  View All <ChevronRight size={14} />
+                </Link>
+              </div>
+
+              {recentApps.length === 0 ? (
+                <div style={{ padding: 30, textAlign: "center", color: "#94A3B8", fontSize: 13 }}>
+                  No recent applications found.
+                </div>
               ) : (
-                items.map(app => (
-                  <tr key={app.session_id}>
-                    <td>
-                      <span style={{ color: "#2563EB", fontWeight: 700, fontSize: 12, fontFamily: "monospace" }}>
-                        {app.session_id.slice(0, 16)}…
-                      </span>
-                    </td>
-                    <td>
-                      <div>
-                        <div style={{ fontWeight: 600, color: "#0A1628", fontSize: 13 }}>
-                          {app.full_name ?? "—"}
-                        </div>
-                        {app.email && (
-                          <div style={{ fontSize: 11, color: "#94A3B8" }}>{app.email}</div>
-                        )}
-                      </div>
-                    </td>
-                    <td>
-                      <span style={{ fontFamily: "monospace", fontSize: 12 }}>
-                        {app.nic_number
-                          ? app.nic_number.slice(0, 4) + "••••" + app.nic_number.slice(-2)
-                          : "—"}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: 12 }}>{app.phone_number ?? "—"}</td>
-                    <td style={{ fontSize: 12 }}>{formatDate(app.created_at)}</td>
-                    <td><StatusBadge status={app.verification_status} /></td>
-                    <td><RiskBadge score={app.risk_score} /></td>
-                    <td style={{ fontWeight: 700, fontSize: 13, color: app.otp_verified ? "#15803D" : "#DC2626" }}>
-                      {app.otp_verified != null ? (app.otp_verified ? "✓ Yes" : "✗ No") : "—"}
-                    </td>
-                    <td>
-                      <Link href={`/applications/${app.session_id}`} style={{ textDecoration: "none" }}>
-                        <button style={{ background: "linear-gradient(135deg, #F5A800, #C98B00)", color: "#0A1628", border: "none", borderRadius: 6, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
-                          View
-                        </button>
-                      </Link>
-                    </td>
-                  </tr>
-                ))
+                <div style={{ overflowX: "auto" }}>
+                  <table className="boc-table">
+                    <thead>
+                      <tr>
+                        <th>Application ID</th>
+                        <th>Customer</th>
+                        <th>Submitted</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentApps.map((app) => (
+                        <tr key={app.session_id}>
+                          <td>
+                            <Link href={`/applications/${app.session_id}`} style={{ color: "#2563EB", textDecoration: "none", fontWeight: 600 }}>
+                              {app.session_id.substring(0, 15)}...
+                            </Link>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 600 }}>{app.full_name || "—"}</div>
+                            <div style={{ fontSize: 11, color: "#94A3B8" }}>{maskNic(app.nic_number)}</div>
+                          </td>
+                          <td style={{ fontSize: 12 }}>{formatDateTime(app.created_at)}</td>
+                          <td><StatusBadge status={app.verification_status} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
+            </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderTop: "1px solid #E2E8F0" }}>
-            <span style={{ fontSize: 12, color: "#94A3B8" }}>Page {page} of {totalPages} · {total} total</span>
-            <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: "5px 8px", borderRadius: 6, border: "1px solid #E2E8F0", background: "#fff", cursor: page === 1 ? "not-allowed" : "pointer", opacity: page === 1 ? 0.4 : 1, color: "#334155" }}>
-                <ChevronLeft size={14} />
-              </button>
-              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: "5px 8px", borderRadius: 6, border: "1px solid #E2E8F0", background: "#fff", cursor: page === totalPages ? "not-allowed" : "pointer", opacity: page === totalPages ? 0.4 : 1, color: "#334155" }}>
-                <ChevronRight size={14} />
-              </button>
+            {/* Quick Actions & System Info */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+
+              {/* Quick Actions */}
+              <div style={{
+                background: "#fff",
+                border: "1px solid #E2E8F0",
+                borderRadius: 14,
+                padding: "20px 24px",
+              }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0A1628", fontFamily: "Poppins, sans-serif", marginBottom: 16 }}>Quick Actions</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <Link href="/applications?status=pending" style={{ textDecoration: "none" }}>
+                    <div style={{ padding: "12px 16px", background: "#F8FAFC", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#0A1628", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid #E2E8F0", transition: "all 0.2s" }} className="kpi-card">
+                      Review Pending Apps <ChevronRight size={14} color="#94A3B8" />
+                    </div>
+                  </Link>
+                  <Link href="/watchlist" style={{ textDecoration: "none" }}>
+                    <div style={{ padding: "12px 16px", background: "#F8FAFC", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#0A1628", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid #E2E8F0", transition: "all 0.2s" }} className="kpi-card">
+                      Manage Watchlist <ChevronRight size={14} color="#94A3B8" />
+                    </div>
+                  </Link>
+                  <Link href="/users" style={{ textDecoration: "none" }}>
+                    <div style={{ padding: "12px 16px", background: "#F8FAFC", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#0A1628", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid #E2E8F0", transition: "all 0.2s" }} className="kpi-card">
+                      User Management <ChevronRight size={14} color="#94A3B8" />
+                    </div>
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }
