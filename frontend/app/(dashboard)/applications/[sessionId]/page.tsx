@@ -9,7 +9,6 @@ import {
     CheckCircle,
     XCircle,
     User,
-    Smartphone,
     FileText,
     Camera,
     PenLine,
@@ -19,7 +18,6 @@ import {
 } from "lucide-react";
 import { formatDateTime, formatDate } from "@/lib/utils";
 
-// ── Types matching backend response ──────────────────
 interface BackendDetail {
     customer: {
         id: number;
@@ -82,7 +80,6 @@ interface BackendDetail {
 
 const TABS = [
     { id: "overview", label: "Overview", icon: User },
-    { id: "otp", label: "OTP", icon: Smartphone },
     { id: "documents", label: "Documents", icon: FileText },
     { id: "biometrics", label: "Biometrics", icon: Camera },
     { id: "signature", label: "Signature", icon: PenLine },
@@ -183,6 +180,7 @@ function OverviewTab({ data }: { data: BackendDetail }) {
     const riskScore = c.risk_score != null ? parseFloat(String(c.risk_score)) : null;
     return (
         <div>
+            {/* Customer fields grid */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
                 <Field label="Full Name" value={c.full_name} />
                 <Field label="NIC Number" value={c.nic_number} />
@@ -201,14 +199,18 @@ function OverviewTab({ data }: { data: BackendDetail }) {
                     <Field label="Language" value={data.sessions[0].language?.toUpperCase()} />
                 )}
             </div>
+
+            {/* Address */}
             {c.address && (
                 <div style={{ background: "#F8FAFC", borderRadius: 8, padding: "10px 14px", marginBottom: 16 }}>
                     <div style={{ fontSize: 10, color: "#94A3B8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Address</div>
                     <div style={{ fontWeight: 600, color: "#0A1628", fontSize: 13 }}>{c.address}</div>
                 </div>
             )}
+
+            {/* Risk score bar */}
             {riskScore != null && (
-                <div style={{ background: "#F8FAFC", borderRadius: 8, padding: "14px 16px" }}>
+                <div style={{ background: "#F8FAFC", borderRadius: 8, padding: "14px 16px", marginBottom: 16 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: "#334155" }}>Risk Score</span>
                         <span style={{ fontSize: 14, fontWeight: 900, color: riskScore >= 70 ? "#DC2626" : riskScore >= 40 ? "#D97706" : "#15803D", fontFamily: "Georgia, serif" }}>
@@ -220,36 +222,19 @@ function OverviewTab({ data }: { data: BackendDetail }) {
                     </div>
                 </div>
             )}
-        </div>
-    );
-}
 
-function OtpTab({ data }: { data: BackendDetail }) {
-    const c = data.customer;
-    return (
-        <div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 20 }}>
-                <div style={{ background: c.otp_verified ? "#DCFCE7" : "#FEE2E2", borderRadius: 10, padding: 20, textAlign: "center" }}>
-                    <div style={{ fontSize: 36 }}>{c.otp_verified ? "✓" : "✗"}</div>
-                    <div style={{ fontWeight: 700, color: c.otp_verified ? "#166534" : "#7F1D1D", fontSize: 14, marginTop: 6 }}>
-                        {c.otp_verified ? "OTP Verified" : "Not Verified"}
+            {/* OTP Status */}
+            <div style={{ background: c.otp_verified ? "#DCFCE7" : "#FEE2E2", borderRadius: 8, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{ fontSize: 28, fontWeight: 700, color: c.otp_verified ? "#166534" : "#7F1D1D" }}>
+                    {c.otp_verified ? "✓" : "✗"}
+                </div>
+                <div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: c.otp_verified ? "#166534" : "#7F1D1D" }}>
+                        {c.otp_verified ? "OTP Verified" : "OTP Not Verified"}
                     </div>
-                </div>
-                <div style={{ background: "#F8FAFC", borderRadius: 10, padding: 20 }}>
-                    <div style={{ fontSize: 10, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Phone Number</div>
-                    <div style={{ fontWeight: 700, color: "#0A1628", fontSize: 14 }}>{c.phone_number ?? "—"}</div>
-                </div>
-                <div style={{ background: "#F8FAFC", borderRadius: 10, padding: 20 }}>
-                    <div style={{ fontSize: 10, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Attempts</div>
-                    <div style={{ fontWeight: 900, color: "#0A1628", fontSize: 28, fontFamily: "Georgia, serif" }}>{c.otp_attempts ?? 0}</div>
-                </div>
-            </div>
-            <div style={{ background: "#F8FAFC", borderRadius: 8, padding: 16 }}>
-                <div style={{ fontSize: 12, color: "#94A3B8" }}>
-                    OTP code: <span style={{ fontFamily: "monospace", fontWeight: 700, letterSpacing: 4, color: "#0A1628" }}>••••••</span>
-                </div>
-                <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 8 }}>
-                    OTP is sent to customer phone number during KYC session
+                    <div style={{ fontSize: 12, color: c.otp_verified ? "#166534" : "#7F1D1D", marginTop: 2 }}>
+                        Phone: {c.phone_number ?? "—"} · Attempts: {c.otp_attempts ?? 0}
+                    </div>
                 </div>
             </div>
         </div>
@@ -587,7 +572,6 @@ export default function AppDetailPage() {
             {/* Tab content */}
             <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 14, padding: 24 }}>
                 {tab === "overview" && <OverviewTab data={data} />}
-                {tab === "otp" && <OtpTab data={data} />}
                 {tab === "documents" && <DocumentsTab data={data} />}
                 {tab === "biometrics" && <BiometricsTab data={data} />}
                 {tab === "signature" && <SignatureTab data={data} />}
