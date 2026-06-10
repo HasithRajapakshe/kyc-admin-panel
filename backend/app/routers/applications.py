@@ -304,3 +304,63 @@ def _write_audit(db, customer, actor, action, reason):
             result=LogResultEnum.success
         )
         db.add(log)
+@router.get("/{session_id}/audit-logs")
+def get_audit_logs(
+    session_id: str,
+    page: int = 1,
+    limit: int = 20,
+    db: Session = Depends(get_db),
+    _: AdminUser = Depends(get_current_user)
+):
+    customer = db.query(Customer).filter(
+        Customer.session_id == session_id
+    ).first()
+
+    if not customer:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found"
+        )
+
+    # Get all sessions for this customer
+    sessions = db.query(VerificationSession).filter(
+        VerificationSession.customer_id == customer.id
+    ).all()
+
+    session_ids = [s.id for s in sessions]
+
+    if not session_ids:
+        return {
+            "total": 0,
+            "page": page,
+            "limit": limit,
+            "total_pages": 0,
+            "logs": []
+        }
+
+    # Get paginated logs
+    query = db.query(VerificationLog).filter(
+        VerificationLog.session_id.in_(session_ids)
+    ).order_by(VerificationLog.timestamp.desc())
+
+    total = query.count()
+    logs = query.offset((page - 1) * limit).limit(limit).all()
+
+    return {
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit,
+        "logs": [
+            {
+                "id": l.id,
+                "step": l.step,
+                "action": l.action,
+                "result": l.result.value,
+                "details": l.details,
+                "confidence_score": str(l.confidence_score) if l.confidence_score else None,
+                "timestamp": l.timestamp,
+            }
+            for l in logs
+        ]
+    }
