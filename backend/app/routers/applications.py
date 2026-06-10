@@ -7,7 +7,7 @@ import csv
 import io
 from app.models.database import (
     get_db, Customer, VerificationSession, VerificationLog,
-    Document, Signature, Account,
+    Document, Signature, Account, WatchlistNIC,
     VerificationStatusEnum, SessionStatusEnum, LogResultEnum
 )
 from app.models.admin_user import AdminUser
@@ -62,7 +62,6 @@ def list_applications(
 
     result = []
     for c in items:
-        # Get latest session status
         latest_session = db.query(VerificationSession).filter(
             VerificationSession.customer_id == c.id
         ).order_by(VerificationSession.id.desc()).first()
@@ -160,6 +159,11 @@ def get_application_detail(
         Account.customer_id == customer.id
     ).all()
 
+    # Watchlist check
+    watchlist_entry = db.query(WatchlistNIC).filter(
+        WatchlistNIC.nic_number == customer.nic_number
+    ).first()
+
     return {
         "customer": {
             "id": customer.id,
@@ -232,7 +236,13 @@ def get_application_detail(
                 "created_at": a.created_at,
             }
             for a in accounts
-        ]
+        ],
+        "watchlist": {
+            "flagged": watchlist_entry is not None,
+            "reason": watchlist_entry.reason if watchlist_entry else None,
+            "added_by": watchlist_entry.added_by if watchlist_entry else None,
+            "added_at": watchlist_entry.added_at if watchlist_entry else None,
+        }
     }
 
 
@@ -283,11 +293,6 @@ def reject_application(
 
 
 def _write_audit(db, customer, actor, action, reason):
-    """
-    Silently writes audit trail to VerificationLog.
-    Uses employee_id so logs are traceable to exact staff member.
-    Format: approved by USR-1234-a3f9-12bc (Hasith). Reason: ...
-    """
     session = db.query(VerificationSession).filter(
         VerificationSession.customer_id == customer.id
     ).order_by(VerificationSession.id.desc()).first()
@@ -304,6 +309,8 @@ def _write_audit(db, customer, actor, action, reason):
             result=LogResultEnum.success
         )
         db.add(log)
+
+
 @router.get("/{session_id}/audit-logs")
 def get_audit_logs(
     session_id: str,
@@ -322,7 +329,6 @@ def get_audit_logs(
             detail="Application not found"
         )
 
-    # Get all sessions for this customer
     sessions = db.query(VerificationSession).filter(
         VerificationSession.customer_id == customer.id
     ).all()
@@ -338,7 +344,6 @@ def get_audit_logs(
             "logs": []
         }
 
-    # Get paginated logs
     query = db.query(VerificationLog).filter(
         VerificationLog.session_id.in_(session_ids)
     ).order_by(VerificationLog.timestamp.desc())
