@@ -15,7 +15,7 @@ import {
   RefreshCw,
   ChevronRight,
 } from "lucide-react";
-import { formatDateTime, maskNic } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 
 interface KPIs {
   total_applications: number;
@@ -456,7 +456,7 @@ export default function DashboardPage() {
                           </td>
                           <td>
                             <div style={{ fontWeight: 600 }}>{app.full_name || "—"}</div>
-                            <div style={{ fontSize: 11, color: "#94A3B8" }}>{maskNic(app.nic_number)}</div>
+                            <div style={{ fontSize: 11, color: "#94A3B8" }}>{app.nic_number}</div>
                           </td>
                           <td style={{ fontSize: 12 }}>{formatDateTime(app.created_at)}</td>
                           <td><StatusBadge status={app.verification_status} /></td>
