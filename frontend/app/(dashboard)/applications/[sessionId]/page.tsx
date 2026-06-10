@@ -76,6 +76,12 @@ interface BackendDetail {
         status: string;
         created_at: string;
     }>;
+    watchlist: {
+        flagged: boolean;
+        reason: string | null;
+        added_by: string | null;
+        added_at: string | null;
+    };
 }
 
 const TABS = [
@@ -178,8 +184,65 @@ function ActionModal({ type, onConfirm, onClose }: {
 function OverviewTab({ data }: { data: BackendDetail }) {
     const c = data.customer;
     const riskScore = c.risk_score != null ? parseFloat(String(c.risk_score)) : null;
+
+    // Extract risk factors from logs
+    const faceMatchLog = data.logs.find(l => l.step === "Face Match");
+    const ocrLog = data.logs.find(l => l.step === "Document OCR");
+    const otpFailed = data.logs.some(l => l.step === "OTP Verification" && l.result === "failed");
+
+    const riskFactors = [
+        {
+            label: "OTP Verification",
+            value: c.otp_verified ? "Pass" : otpFailed ? "Failed" : "Not Verified",
+            ok: c.otp_verified,
+            score: null,
+        },
+        {
+            label: "Face Match",
+            value: faceMatchLog ? (faceMatchLog.result === "success" ? "Pass" : "Failed") : "—",
+            ok: faceMatchLog?.result === "success",
+            score: faceMatchLog?.confidence_score ? parseFloat(faceMatchLog.confidence_score) : null,
+        },
+        {
+            label: "Document OCR",
+            value: ocrLog ? (ocrLog.result === "success" ? "Pass" : "Failed") : "—",
+            ok: ocrLog?.result === "success",
+            score: ocrLog?.confidence_score ? parseFloat(ocrLog.confidence_score) : null,
+        },
+        {
+            label: "Name Verified",
+            value: data.sessions[0]?.name_verified ? "Pass" : "Failed",
+            ok: data.sessions[0]?.name_verified ?? false,
+            score: null,
+        },
+        {
+            label: "Watchlist",
+            value: data.watchlist?.flagged ? "FLAGGED" : "Clear",
+            ok: !data.watchlist?.flagged,
+            score: null,
+        },
+    ];
+
     return (
         <div>
+            {/* Watchlist alert banner */}
+            {data.watchlist?.flagged && (
+                <div style={{ background: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: 10, padding: "14px 18px", marginBottom: 16, display: "flex", alignItems: "flex-start", gap: 12 }}>
+                    <div style={{ fontSize: 20 }}>🚨</div>
+                    <div>
+                        <div style={{ fontWeight: 800, color: "#7F1D1D", fontSize: 14, marginBottom: 4 }}>
+                            This NIC is on the Watchlist
+                        </div>
+                        <div style={{ fontSize: 12, color: "#991B1B" }}>
+                            Reason: {data.watchlist.reason ?? "—"}
+                        </div>
+                        <div style={{ fontSize: 11, color: "#B91C1C", marginTop: 2 }}>
+                            Added by: {data.watchlist.added_by ?? "—"} · {data.watchlist.added_at ? formatDateTime(data.watchlist.added_at) : "—"}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Customer fields grid */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
                 <Field label="Full Name" value={c.full_name} />
@@ -222,6 +285,35 @@ function OverviewTab({ data }: { data: BackendDetail }) {
                     </div>
                 </div>
             )}
+
+            {/* Risk Analysis Panel */}
+            <div style={{ background: "#F8FAFC", borderRadius: 10, padding: "16px 18px", marginBottom: 16, border: "1px solid #E2E8F0" }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "#334155", letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
+                    Risk Analysis
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    {riskFactors.map(factor => (
+                        <div key={factor.label} style={{ background: "#fff", borderRadius: 8, padding: "10px 14px", border: `1px solid ${factor.ok ? "#BBF7D0" : "#FECACA"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div>
+                                <div style={{ fontSize: 11, color: "#94A3B8", fontWeight: 600, marginBottom: 2 }}>{factor.label}</div>
+                                <div style={{ fontSize: 13, fontWeight: 800, color: factor.ok ? "#15803D" : "#DC2626" }}>
+                                    {factor.value}
+                                </div>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                                <div style={{ fontSize: 18, fontWeight: 900, color: factor.ok ? "#15803D" : "#DC2626" }}>
+                                    {factor.ok ? "✓" : "✗"}
+                                </div>
+                                {factor.score != null && (
+                                    <div style={{ fontSize: 10, color: "#94A3B8", marginTop: 2 }}>
+                                        {factor.score.toFixed(1)}%
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
 
             {/* OTP Status */}
             <div style={{ background: c.otp_verified ? "#DCFCE7" : "#FEE2E2", borderRadius: 8, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14 }}>
