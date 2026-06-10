@@ -66,6 +66,10 @@ def list_applications(
             VerificationSession.customer_id == c.id
         ).order_by(VerificationSession.id.desc()).first()
 
+        watchlist_entry = db.query(WatchlistNIC).filter(
+            WatchlistNIC.nic_number == c.nic_number
+        ).first()
+
         result.append({
             "session_id": c.session_id,
             "full_name": c.full_name,
@@ -79,6 +83,8 @@ def list_applications(
             "otp_verified": c.otp_verified,
             "account_purpose": c.account_purpose,
             "session_status": latest_session.status.value if latest_session else None,
+            "watchlist_flagged": watchlist_entry is not None,
+            "watchlist_reason": watchlist_entry.reason if watchlist_entry else None,
         })
 
     return {
